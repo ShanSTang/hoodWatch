@@ -732,7 +732,7 @@ function updateAllVisuals() {
   updateTable();
   updateTrendChart();
   updateRankingChart();
-  updateHeatmap();
+  updateHeatmapChart();
 }
 
 
