@@ -1251,118 +1251,187 @@ function rankingValue(row, metric) {
    --------------------------------------------------------- */
 
 function updateHeatmapChart() {
+  const selectedBuilding = buildingFilter.value;
 
-  if (!summary.length) {
+  if (!selectedBuilding) {
     Plotly.react(
       heatmapChart,
       [],
-      baseChartLayout("No data"),
+      {
+        ...baseChartLayout(
+          "Select a building to view hood ACH"
+        ),
+        xaxis: { visible: false },
+        yaxis: { visible: false },
+        annotations: [{
+          text: "Please select a building first.",
+          x: 0.5,
+          y: 0.5,
+          xref: "paper",
+          yref: "paper",
+          showarrow: false,
+          font: { size: 14 }
+        }]
+      },
       plotConfig()
     );
-
     return;
   }
 
+  // Keep every inspection, not just the latest per hood.
+  const records = filteredRecords
+    .filter(record => record.building === selectedBuilding)
+    .sort((a, b) =>
+      naturalSort(a.hood, b.hood) ||
+      a.date - b.date
+    );
+
+  if (!records.length) {
+    Plotly.react(
+      heatmapChart,
+      [],
+      baseChartLayout(
+        `${selectedBuilding} — No matching inspections`
+      ),
+      plotConfig()
+    );
+    return;
+  }
 
   /*
-   * Group by Building + Lab.
-   *
-   * "Average absolute ACH change by location"
+   * Assign each hood a stable categorical X position.
+   * Include lab in the key so identically named hoods
+   * in different labs are distinguishable.
    */
-  const locationMap = new Map();
+  const hoodKeys = [...new Set(
+    records.map(record => record.hoodKey)
+  )].sort(naturalSort);
 
-
-  summary.forEach(row => {
-
-    const key =
-      `${row.building}|||${row.lab}`;
-
-    if (!locationMap.has(key)) {
-      locationMap.set(key, {
-        building: row.building,
-        lab: row.lab,
-        values: []
-      });
-    }
-
-    locationMap
-      .get(key)
-      .values
-      .push(Math.abs(row.achDropBaseline));
+  const hoodLabels = hoodKeys.map(key => {
+    const record = records.find(r => r.hoodKey === key);
+    return `${record.lab} · ${record.hood}`;
   });
 
-
-  const locations =
-    [...locationMap.values()];
-
-
-  const buildings = unique(
-    locations.map(item => item.building)
-  ).sort(naturalSort);
-
-
-  const labs = unique(
-    locations.map(item => item.lab)
-  ).sort(naturalSort);
-
-
-  const z = labs.map(lab =>
-    buildings.map(building => {
-
-      const location =
-        locations.find(
-          item =>
-            item.building === building &&
-            item.lab === lab
-        );
-
-      if (!location) {
-        return null;
-      }
-
-      const total =
-        location.values.reduce(
-          (sum, value) => sum + value,
-          0
-        );
-
-      return total / location.values.length;
-    })
+  const hoodPosition = new Map(
+    hoodKeys.map((key, index) => [key, index])
   );
 
+  /*
+   * Inspection-period color groups.
+   * Adjust these boundaries or labels to match your
+   * actual inspection schedule.
+   */
+    function getInspectionPeriod(date) {
+    return String(date.getFullYear());
+  }
 
-  const trace = {
-    x: buildings,
-    y: labs,
-    z,
-    type: "heatmap",
-    hovertemplate:
-      "Building: %{x}<br>" +
-      "Lab: %{y}<br>" +
-      "Average absolute ACH change: %{z:.1f}<extra></extra>"
-  };
+  // Discover all years present in the filtered records.
+  const periods = [...new Set(
+    records.map(record => getInspectionPeriod(record.date))
+  )].sort((a, b) => Number(a) - Number(b));
 
+  // Generate distinct colors automatically for any number of years.
+  function yearColor(year, index, total) {
+    const palette = [
+      "#f59e0b", // Orange
+      "#22c55e", // Green
+      "#3b82f6", // Blue
+      "#a855f7", // Purple
+      "#ef4444", // Red
+      "#06b6d4", // Cyan
+      "#ec4899", // Pink
+      "#84cc16", // Lime
+      "#f97316", // Dark orange
+      "#6366f1"  // Indigo
+    ];
+
+    if (index < palette.length) {
+      return palette[index];
+    }
+
+    // Continue generating colors for additional years.
+    const hue = (Number(year) * 137.508) % 360;
+    return `hsl(${hue}, 65%, 45%)`;
+  }
+
+  const traces = periods.map((period, periodIndex) => {
+     const periodRecords = records.filter(
+       record => getInspectionPeriod(record.date) === period
+     );
+   
+     return {
+       type: "scatter",
+       mode: "markers",
+       name: period,
+       x: periodRecords.map(
+         record => hoodPosition.get(record.hoodKey)
+       ),
+       y: periodRecords.map(record => record.ach),
+       marker: {
+         color: yearColor(period, periodIndex, periods.length),
+         size: 10,
+         opacity: 0.85,
+         line: {
+           color: "#ffffff",
+           width: 0.5
+         }
+       },
+      customdata: periodRecords.map(record => [
+        record.building,
+        record.lab,
+        record.hood,
+        record.date,
+        record.ach
+      ]),
+      hovertemplate:
+        "<b>%{customdata[2]}</b><br>" +
+        "Building: %{customdata[0]}<br>" +
+        "Lab: %{customdata[1]}<br>" +
+        "Inspection date: %{customdata[3]|%b %d, %Y}<br>" +
+        "ACH: %{customdata[4]:.1f}<br>" +
+        "Period: " + period +
+        "<extra></extra>"
+    };
+  });
 
   Plotly.react(
     heatmapChart,
-    [trace],
+    traces,
     {
       ...baseChartLayout(
-        "Average absolute ACH change by location"
+        `${selectedBuilding} — ACH by Hood and Inspection Period`
       ),
-
-      xaxis: {
-        title: "Building"
+      margin: {
+        l: 75,
+        r: 25,
+        t: 60,
+        b: 120
       },
-
+      xaxis: {
+        title: "Hood name",
+        tickmode: "array",
+        tickvals: hoodKeys.map((_, index) => index),
+        ticktext: hoodLabels,
+        tickangle: -45,
+        automargin: true,
+        zeroline: false
+      },
       yaxis: {
-        title: "Lab"
-      }
+        title: "Air changes per hour (ACH)",
+        rangemode: "tozero"
+      },
+      showlegend: true,
+      legend: {
+        orientation: "h",
+        y: -0.35,
+        x: 0,
+        title: { text: "Inspection period" }
+      },
+      hovermode: "closest"
     },
     plotConfig()
   );
 }
-
 
 /* ---------------------------------------------------------
    Export
