@@ -735,6 +735,10 @@ function updateAllVisuals() {
   updateHeatmapChart();
 }
 
+function updateHeatmap() {
+  updateHeatmapChart();
+}
+
 
 /* ---------------------------------------------------------
    KPIs
