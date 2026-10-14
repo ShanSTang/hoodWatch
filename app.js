@@ -573,12 +573,12 @@ function calculateSummary(records) {
 
       const dropPercentPrevious =
         previousACH !== null && previousACH > 0
-          ? 100 * dropPrevious / previousACH
+          ? 100 * (record.ach - previousACH) / previousACH
           : null;
-
+      
       const dropPercentBaseline =
         firstACH > 0
-          ? 100 * dropBaseline / firstACH
+          ? 100 * (record.ach - firstACH) / firstACH
           : null;
 
       enriched.push({
@@ -1423,7 +1423,7 @@ function updateHeatmapChart() {
       showlegend: true,
       legend: {
         orientation: "h",
-        y: -0.55,
+        y: -1,
         x: 0,
         title: { text: "Hood Test Year:" }
       },
