@@ -565,11 +565,12 @@ function calculateSummary(records) {
        */
       const dropPrevious =
         previousACH !== null
-          ? previousACH - record.ach
+          ? record.ach - previousACH
           : null;
 
       const dropBaseline =
-        firstACH - record.ach;
+        record.ach - firstACH;
+
 
       const dropPercentPrevious =
         previousACH !== null && previousACH > 0
