@@ -392,20 +392,32 @@ function initializeFilters() {
   updateLabOptions();
 
   const dates = allRecords
-    .map(record => record.date)
-    .filter(Boolean)
-    .sort((a, b) => a - b);
+  .map(record => record.date)
+  .filter(date =>
+    date instanceof Date &&
+    Number.isFinite(date.getTime())
+  )
+  .sort((a, b) => a - b);
 
-  if (dates.length) {
-    startDate.min = dateKey(dates[0]);
-    startDate.max = dateKey(dates[dates.length - 1]);
+if (dates.length) {
+  const minDate = dateKey(dates[0]);
+  const maxDate = dateKey(dates[dates.length - 1]);
 
-    endDate.min = dateKey(dates[0]);
-    endDate.max = dateKey(dates[dates.length - 1]);
+  startDate.min = minDate;
+  startDate.max = maxDate;
+  endDate.min = minDate;
+  endDate.max = maxDate;
 
-    startDate.value = dateKey(dates[0]);
-    endDate.value = dateKey(dates[dates.length - 1]);
-  }
+  startDate.value = minDate;
+  endDate.value = maxDate;
+} else {
+  startDate.value = "";
+  endDate.value = "";
+  startDate.removeAttribute("min");
+  startDate.removeAttribute("max");
+  endDate.removeAttribute("min");
+  endDate.removeAttribute("max");
+}
 }
 
 
@@ -444,23 +456,26 @@ function updateLabOptions() {
 
 
 function applyFilters() {
-  if (!allRecords.length) {
-    return;
-  }
-
-  const building = buildingFilter.value;
-  const lab = labFilter.value;
+  const building = buildingFilter.value || "";
+  const lab = labFilter.value || "";
 
   const start = startDate.value
     ? new Date(`${startDate.value}T00:00:00`)
     : null;
 
   const end = endDate.value
-    ? new Date(`${endDate.value}T23:59:59`)
+    ? new Date(`${endDate.value}T23:59:59.999`)
     : null;
 
-  filteredRecords = allRecords.filter(record => {
+  // No data? Keep the dashboard in a safe empty state.
+  if (!allRecords.length) {
+    filteredRecords = [];
+    summary = [];
+    updateAllVisuals();
+    return;
+  }
 
+  filteredRecords = allRecords.filter(record => {
     if (building && record.building !== building) {
       return false;
     }
@@ -480,10 +495,13 @@ function applyFilters() {
     return true;
   });
 
-  /*
-   * Recreate the pandas analysis on the filtered data.
-   */
   summary = calculateSummary(filteredRecords);
+
+  // Clear a hood selection if it no longer exists in the filtered data.
+  if (!summary.some(row => row.hoodKey === selectedHoodKey)) {
+    selectedHoodKey = "";
+    hoodFilter.value = "";
+  }
 
   updateAllVisuals();
 }
@@ -1629,13 +1647,16 @@ function clearData() {
    --------------------------------------------------------- */
 
 function enableControls(enabled) {
+  buildingFilter.disabled = false;
+  labFilter.disabled = false;
+  startDate.disabled = false;
+  endDate.disabled = false;
+  rankMetric.disabled = false;
+  hoodFilter.disabled = false;
 
-  buildingFilter.disabled = !enabled;
-  labFilter.disabled = !enabled;
-  startDate.disabled = !enabled;
-  endDate.disabled = !enabled;
-  rankMetric.disabled = !enabled;
-  hoodFilter.disabled = !enabled;
+  clearBtn.disabled = !enabled;
+  exportBtn.disabled = !enabled;
+  resetFiltersBtn.disabled = !enabled;
 }
 
 
