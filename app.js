@@ -1405,7 +1405,7 @@ function updateHeatmapChart() {
         l: 75,
         r: 25,
         t: 60,
-        b: 120
+        b: 160
       },
       xaxis: {
         title: "Hood name",
@@ -1423,9 +1423,9 @@ function updateHeatmapChart() {
       showlegend: true,
       legend: {
         orientation: "h",
-        y: -0.35,
+        y: -0.55,
         x: 0,
-        title: { text: "Inspection period" }
+        title: { text: "Hood Test Year:" }
       },
       hovermode: "closest"
     },
