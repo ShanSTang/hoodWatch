@@ -1419,7 +1419,8 @@ function updateHeatmapChart() {
       },
       yaxis: {
         title: "Air changes per hour (ACH)",
-        rangemode: "tozero"
+        rangemode: "tozero",
+        autorange: true
       },
        shapes: [
         {
@@ -1430,9 +1431,10 @@ function updateHeatmapChart() {
           yref: "y",
           y0: 200,
           y1: 400,
-          fillcolor: "rgba(34, 197, 94, 0.10)",
+          fillcolor: "rgba(34, 197, 94, 0.20)",
           line: {
-            width: 0
+            color: "rgba(34, 197, 94, 0.5)",
+            width: 1
           },
           layer: "below"
         }
