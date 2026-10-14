@@ -1421,6 +1421,22 @@ function updateHeatmapChart() {
         title: "Air changes per hour (ACH)",
         rangemode: "tozero"
       },
+       shapes: [
+        {
+          type: "rect",
+          xref: "paper",
+          x0: 0,
+          x1: 1,
+          yref: "y",
+          y0: 200,
+          y1: 400,
+          fillcolor: "rgba(34, 197, 94, 0.10)",
+          line: {
+            width: 0
+          },
+          layer: "below"
+        }
+      ],
       showlegend: true,
       legend: {
         orientation: "h",
