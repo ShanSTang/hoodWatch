@@ -328,10 +328,14 @@ h2 {
 }
 
 .hood-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   max-height: 390px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 5px;
+  padding: 2px 6px 2px 2px;
+  align-content: start;
 }
 
 .hood-card {
