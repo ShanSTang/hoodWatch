@@ -71,6 +71,29 @@
       <div id="errorMessage" class="error-message" role="alert" hidden></div>
     </section>
 
+    <section class="kpi-grid" aria-label="Performance summary">
+      <article class="kpi-card panel">
+        <span class="kpi-label">Hoods monitored</span>
+        <strong id="kpiHoods">—</strong>
+        <span class="kpi-foot">In current selection</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">Deteriorated</span>
+        <strong id="kpiFlagged" class="danger-text">—</strong>
+        <span class="kpi-foot">Meeting either rule</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">Buildings</span>
+        <strong id="kpiBuildings">—</strong>
+        <span class="kpi-foot">Represented in selection</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">Labs</span>
+        <strong id="kpiLabs">—</strong>
+        <span class="kpi-foot">Represented in selection</span>
+      </article>
+    </section>
+
     <section class="filter-card panel">
       <div class="section-heading">
         <div>
@@ -113,29 +136,20 @@
       </p>
     </section>
 
-    <section class="kpi-grid" aria-label="Performance summary">
-      <article class="kpi-card panel">
-        <span class="kpi-label">Hoods monitored</span>
-        <strong id="kpiHoods">—</strong>
-        <span class="kpi-foot">In current selection</span>
-      </article>
-      <article class="kpi-card panel">
-        <span class="kpi-label">Deteriorated</span>
-        <strong id="kpiFlagged" class="danger-text">—</strong>
-        <span class="kpi-foot">Meeting either rule</span>
-      </article>
-      <article class="kpi-card panel">
-        <span class="kpi-label">Buildings</span>
-        <strong id="kpiBuildings">—</strong>
-        <span class="kpi-foot">Represented in selection</span>
-      </article>
-      <article class="kpi-card panel">
-        <span class="kpi-label">Labs</span>
-        <strong id="kpiLabs">—</strong>
-        <span class="kpi-foot">Represented in selection</span>
+    <article class="panel chart-panel chart-wide">
+        <div class="section-heading">
+          <div>
+            <h2>Minimum Air Changes Per Hour by Hood Over Time</h2>
+            <p class="muted">
+              Select a building to compare inspection readings over time.
+  Each marker represents one inspection.
+            </p>
+          </div>
+        </div>
+        <div id="heatmapChart" class="chart heatmap-chart"></div>
       </article>
     </section>
-
+    
     <section class="panel">
       <div class="section-heading">
         <div>
@@ -176,20 +190,6 @@
         </div>
         <div id="rankingChart" class="chart"></div>
       </article>
-
-      <article class="panel chart-panel chart-wide">
-        <div class="section-heading">
-          <div>
-            <h2>Minimum Air Changes Per Hour by Hood Over Time</h2>
-            <p class="muted">
-              Select a building to compare inspection readings over time.
-  Each marker represents one inspection.
-            </p>
-          </div>
-        </div>
-        <div id="heatmapChart" class="chart heatmap-chart"></div>
-      </article>
-    </section>
 
     <section class="panel">
       <div class="section-heading">
