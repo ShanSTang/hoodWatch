@@ -96,6 +96,9 @@ button:disabled, select:disabled, input:disabled {
   width: min(1440px, calc(100% - 48px));
   margin: 0 auto;
   padding: 34px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
 .page-heading {
@@ -103,7 +106,7 @@ button:disabled, select:disabled, input:disabled {
   justify-content: space-between;
   align-items: flex-end;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 h1, h2, p { margin-top: 0; }
@@ -141,7 +144,7 @@ h2 {
   box-shadow: 0 2px 7px rgba(23, 43, 77, .025);
 }
 
-.upload-card, .filter-card { margin-bottom: 18px; }
+.upload-card, .filter-card { margin-bottom: 0; }
 
 .section-heading {
   display: flex;
@@ -297,7 +300,7 @@ h2 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
 .kpi-card {
@@ -386,11 +389,15 @@ h2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
-  margin: 18px 0;
+  margin: 0;
 }
 
 .chart-panel { min-width: 0; }
-.chart-wide { grid-column: 1 / -1; }
+.chart-wide { 
+  grid-column: auto;
+  width: 100%;
+  margin-bottom: 6px;
+}
 
 .chart {
   min-width: 0;
@@ -398,7 +405,7 @@ h2 {
   min-height: 320px;
 }
 
-.heatmap-chart { min-height: 360px; }
+.heatmap-chart { min-height: 460px; }
 
 .chart-panel select {
   max-width: 240px;
@@ -461,7 +468,7 @@ td { color: #34445c; }
   padding: 28px;
 }
 
-.rules-card { margin-top: 18px; }
+.rules-card { margin-top: 0; }
 
 .rules-grid {
   display: grid;
