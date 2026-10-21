@@ -61,7 +61,8 @@ const REQUIRED_COLUMNS = [
   "Lab ID",
   "Hood ID",
   "Date",
-  "ACH"
+  "ACH",
+   "Face velocity"
 ];
 
 
@@ -336,6 +337,7 @@ function parseRows(rows) {
 
     const date = parseDate(row["Date"]);
     const ach = parseACH(row["ACH"]);
+    const faceVelocity = parseACH(row["Face velocity"]); 
 
     if (!date || !Number.isFinite(ach)) {
       return;
@@ -358,6 +360,7 @@ function parseRows(rows) {
       date,
       dateString: dateKey(date),
       ach,
+      faceVelocity,
       hoodKey
     });
   });
@@ -750,7 +753,7 @@ function updateAllVisuals() {
   updateHoodSelector();
   updateTable();
   updateTrendChart();
-  updateRankingChart();
+  updateFaceVelocityChart();
   updateHeatmapChart();
 }
 
@@ -864,6 +867,7 @@ function updateFlaggedHoods() {
           selectedHoodKey;
 
         updateTrendChart();
+        updateFaceVelocityChart();
 
         trendChart.scrollIntoView({
           behavior: "smooth",
@@ -1014,7 +1018,7 @@ function updateTable() {
           selectedHoodKey;
 
         updateTrendChart();
-
+         
         trendChart.scrollIntoView({
           behavior: "smooth",
           block: "center"
@@ -1124,103 +1128,92 @@ function updateTrendChart() {
 
 
 /* ---------------------------------------------------------
-   Ranking chart
+   Face Velocity History chart
+   Replaces the Deterioration Ranking chart
    --------------------------------------------------------- */
 
-function updateRankingChart() {
-
-  if (!summary.length) {
-
+function updateFaceVelocityChart() {
+  if (!selectedHoodKey) {
     Plotly.react(
       rankingChart,
       [],
-      baseChartLayout("No data"),
+      {
+        ...baseChartLayout(
+          "Select a hood to view Face Velocity History"
+        ),
+        xaxis: { visible: false },
+        yaxis: { visible: false }
+      },
       plotConfig()
     );
-
     return;
   }
 
+  const records = filteredRecords
+    .filter(record =>
+      record.hoodKey === selectedHoodKey &&
+      Number.isFinite(record.faceVelocity)
+    )
+    .sort((a, b) => a.date - b.date);
 
-  const metric =
-    rankMetric.value;
-
-
-  const ranked = [...summary]
-    .filter(row => row.trendAvailable)
-    .sort((a, b) => {
-
-      const aValue = rankingValue(a, metric);
-      const bValue = rankingValue(b, metric);
-
-      return bValue - aValue;
-    })
-    .slice(0, 15)
-    .reverse();
-
-
-  const x = ranked.map(row =>
-    metric === "percent"
-      ? Math.abs(row.achDropPercentBaseline)
-      : Math.abs(row.achDropBaseline)
-  );
-
-
-  const y = ranked.map(row =>
-    `${row.building} · ${row.lab} · ${row.hood}`
-  );
-
+  if (!records.length) {
+    Plotly.react(
+      rankingChart,
+      [],
+      baseChartLayout(
+        "No face velocity data available for this hood"
+      ),
+      plotConfig()
+    );
+    return;
+  }
 
   const trace = {
-    x,
-    y,
-    type: "bar",
-    orientation: "h",
-
-    customdata: ranked.map(row => [
-      row.achDropBaseline,
-      row.achDropPercentBaseline
-    ]),
-
+    x: records.map(record => record.date),
+    y: records.map(record => record.faceVelocity),
+    type: "scatter",
+    mode: "lines+markers",
+    name: "Face velocity",
     hovertemplate:
-      "<b>%{y}</b><br>" +
-      "ACH change: %{customdata[0]:.1f}<br>" +
-      "Percent change: %{customdata[1]:.1f}%<extra></extra>"
+      "<b>%{x|%b %d, %Y}</b><br>" +
+      "Face velocity: %{y:.2f}<extra></extra>"
   };
 
+  // Show the first recorded face velocity as a baseline.
+  const baseline = records[0].faceVelocity;
 
-  const title =
-    metric === "percent"
-      ? "Absolute ACH change (%)"
-      : metric === "drop"
-        ? "ACH decrease"
-        : "Absolute ACH change";
+  const shapes = [{
+    type: "line",
+    x0: records[0].date,
+    x1: records[records.length - 1].date,
+    y0: baseline,
+    y1: baseline,
+    line: {
+      dash: "dash",
+      width: 1,
+      color: "#94a3b8"
+    }
+  }];
 
+  const layout = {
+    ...baseChartLayout(
+      `${records[0].hood} — Face Velocity History`
+    ),
+    xaxis: {
+      title: "Inspection date",
+      type: "date"
+    },
+    yaxis: {
+      title: "Face velocity",
+      rangemode: "tozero"
+    },
+    shapes
+  };
 
   Plotly.react(
     rankingChart,
     [trace],
-    {
-      ...baseChartLayout(title),
-
-      margin: {
-        l: 190,
-        r: 30,
-        t: 50,
-        b: 50
-      },
-
-      xaxis: {
-        title:
-          metric === "percent"
-            ? "Absolute change (%)"
-            : "Absolute ACH change"
-      },
-
-      yaxis: {
-        automargin: true
-      }
-    },
+    layout,
     plotConfig()
   );
 }
@@ -1598,10 +1591,10 @@ hoodFilter.addEventListener(
   "change",
   () => {
 
-    selectedHoodKey =
-      hoodFilter.value;
+    selectedHoodKey = hoodFilter.value;
 
-    updateTrendChart();
+     updateTrendChart();
+     updateFaceVelocityChart();
   }
 );
 
@@ -1715,7 +1708,7 @@ function clearData() {
   Plotly.react(
     rankingChart,
     [],
-    baseChartLayout("Deterioration ranking"),
+    baseChartLayout("Select a hood to view Face Velocity History"),
     plotConfig()
   );
 
@@ -1855,7 +1848,7 @@ Plotly.newPlot(
 Plotly.newPlot(
   rankingChart,
   [],
-  baseChartLayout("Deterioration ranking"),
+  baseChartLayout("Select a hood to view Face Velocity History"),
   plotConfig()
 );
 
