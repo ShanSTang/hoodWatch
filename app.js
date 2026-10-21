@@ -30,7 +30,6 @@ const buildingFilter = document.getElementById("buildingFilter");
 const labFilter = document.getElementById("labFilter");
 const startDate = document.getElementById("startDate");
 const endDate = document.getElementById("endDate");
-const rankMetric = document.getElementById("rankMetric");
 const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 const hoodFilter = document.getElementById("hoodFilter");
 
@@ -1440,7 +1439,7 @@ function updateHeatmapChart() {
     traces,
     {
       ...baseChartLayout(
-        `${selectedBuilding} — ACH by Hood and Inspection Period`
+        `${selectedBuilding} — ${metricLabel} by Hood and Inspection Period`
       ),
       margin: {
         l: 75,
@@ -1634,13 +1633,6 @@ endDate.addEventListener(
   applyFilters
 );
 
-
-rankMetric.addEventListener(
-  "change",
-  updateRankingChart
-);
-
-
 hoodFilter.addEventListener(
   "change",
   () => {
@@ -1676,8 +1668,6 @@ resetFiltersBtn.addEventListener(
 
     endDate.value =
       dateKey(dates[dates.length - 1]);
-
-    rankMetric.value = "absolute";
 
     selectedHoodKey = "";
     hoodFilter.value = "";
@@ -1736,7 +1726,8 @@ function clearData() {
   kpiFlagged.textContent = "—";
   kpiBuildings.textContent = "—";
   kpiLabs.textContent = "—";
-
+  kpiVAVFailing.textContent = "—";
+   
   flagCount.textContent =
     "0 flagged";
 
@@ -1791,7 +1782,6 @@ function enableControls(enabled) {
   labFilter.disabled = false;
   startDate.disabled = false;
   endDate.disabled = false;
-  rankMetric.disabled = false;
   hoodFilter.disabled = false;
 
   heatmapMetric.disabled = !enabled;
