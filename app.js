@@ -702,13 +702,13 @@ function getDeteriorationStatus(row) {
 
   /*
    * Rule 01:
-   * Absolute change >= 100 ACH
+   * ACH increased >= 100 ACH
    */
   if (
-    Math.abs(row.achDropBaseline) >= 100
+    row.achDropBaseline >= 100
   ) {
     reasons.push(
-      `Absolute change ≥ 100 ACH`
+      `ACH increased ≥ 100 ACH`
     );
   }
 
