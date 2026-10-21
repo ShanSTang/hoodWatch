@@ -1408,19 +1408,21 @@ function updateHeatmapChart() {
        ),
        y: periodRecords.map(record => record[metricField]),
        marker: {
-         color: yearColor(period, periodIndex, periods.length),
-         size: 10,
-         opacity: 0.85,
-         line: {
-          color: yValues.map(y => {
+        color: yearColor(period, periodIndex, periods.length),
+        size: 10,
+        opacity: 0.85,
+        line: {
+          color: periodRecords.map(record => {
+            const value = record[metricField];
+      
             if (metric === "ach") {
-              return (y < 200 || y > 400)
+              return (value < 200 || value > 400)
                 ? "rgba(240, 71, 52, 0.8)"
                 : "rgba(0, 0, 0, 0.15)";
             }
       
-            if (metric === "face velocity") {
-              return (y < 80 || y > 120)
+            if (metric === "faceVelocity") {
+              return (value < 80 || value > 120)
                 ? "rgba(240, 71, 52, 0.8)"
                 : "rgba(0, 0, 0, 0.15)";
             }
@@ -1429,7 +1431,7 @@ function updateHeatmapChart() {
           }),
           width: 1.5
         }
-       },
+      },
       customdata: periodRecords.map(record => [
         record.building,
         record.lab,
