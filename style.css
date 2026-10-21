@@ -299,12 +299,12 @@ h2 {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
+  gap: 13px;
   margin-bottom: 0;
 }
 
 .kpi-card {
-  padding: 20px;
+  padding: 16px;
 }
 
 .kpi-label, .kpi-foot { display: block; }
