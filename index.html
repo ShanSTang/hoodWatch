@@ -148,7 +148,6 @@
         </div>
         <div id="heatmapChart" class="chart heatmap-chart"></div>
       </article>
-    </section>
     
     <section class="panel">
       <div class="section-heading">
@@ -190,7 +189,8 @@
         </div>
         <div id="rankingChart" class="chart"></div>
       </article>
-
+    </section>
+    
     <section class="panel">
       <div class="section-heading">
         <div>
@@ -226,6 +226,28 @@
       </div>
     </section>
 
+    <section class="rules-card panel">
+      <h2>How deterioration is flagged</h2>
+      <div class="rules-grid">
+        <div>
+          <span class="rule-number">01</span>
+          <strong>Minimum Flow ACH Inceased ≥ 100 ACH</strong>
+          <p>ACH at minimum flow increased by 100 air changes per hour or more.</p>
+        </div>
+        <div>
+          <span class="rule-number">02</span>
+          <strong>Crosses the 200–400 range</strong>
+          <p>Baseline is 200–400 inclusive and latest ACH is below 200 or above 400.</p>
+        </div>
+      </div>
+      <p class="muted small">
+        These are user-defined monitoring rules, not a determination of hood safety
+        or regulatory compliance. Verify any flagged result against applicable
+        facility procedures and qualified personnel.
+      </p>
+    </section>
+
+    
     <footer>
       <span>HoodWatch · Browser-based inspection analytics</span>
     </footer>
