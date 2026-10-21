@@ -684,7 +684,7 @@ function calculateSummary(records) {
    * )
    */
   return results.sort(
-    (a, b) => b.achDropBaseline - a.achDropBaseline
+    (a, b) => b.latestACH - a.latestACH
   );
 }
 
