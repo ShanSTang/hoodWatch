@@ -1373,11 +1373,8 @@ function updateHeatmapChart() {
   // Generate distinct colors automatically for any number of years.
   function yearColor(year, index, total) {
     const palette = [
-      "#f59e0b", // Orange
-      "#22c55e", // Green
       "#3b82f6", // Blue
       "#a855f7", // Purple
-      "#ef4444", // Red
       "#06b6d4", // Cyan
       "#ec4899", // Pink
       "#84cc16", // Lime
@@ -1429,7 +1426,7 @@ function updateHeatmapChart() {
       
             return "rgba(0, 0, 0, 0.15)";
           }),
-          width: 1.5
+          width: 2
         }
       },
       customdata: periodRecords.map(record => [
