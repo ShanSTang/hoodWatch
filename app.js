@@ -797,8 +797,8 @@ function updateKPIs() {
   const failingVAVSystems = new Set(
      summary
         .filter(row=> getVAVFailureStatus(row).failing)
-        map(row => row.hoodKey)
-  )
+        .map(row => row.hoodKey)
+  );
   const buildings = new Set(
     summary.map(row => row.building)
   );
