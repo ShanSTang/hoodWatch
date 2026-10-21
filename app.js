@@ -1463,23 +1463,43 @@ function updateHeatmapChart() {
         rangemode: "tozero",
         autorange: true
       },
-       shapes: metric === "ach" ? [
-        {
-          type: "rect",
-          xref: "paper",
-          x0: 0,
-          x1: 1,
-          yref: "y",
-          y0: 200,
-          y1: 400,
-          fillcolor: "rgba(34, 197, 94, 0.20)",
-          line: {
-            color: "rgba(34, 197, 94, 0.5)",
-            width: 1
-          },
-          layer: "below"
-        }
-      ] : [],
+       shapes:metric === "ach"
+          ? [
+              {
+                type: "rect",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y",
+                y0: 200,
+                y1: 400,
+                fillcolor: "rgba(34, 197, 94, 0.20)",
+                line: {
+                  color: "rgba(34, 197, 94, 0.5)",
+                  width: 1
+                },
+                layer: "below"
+              }
+            ]
+          : metric === "faceVelocity"
+          ? [
+              {
+                type: "rect",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y",
+                y0: 80,
+                y1: 120,
+                fillcolor: "rgba(34, 197, 94, 0.20)",
+                line: {
+                  color: "rgba(34, 197, 94, 0.5)",
+                  width: 1
+                },
+                layer: "below"
+              }
+            ]
+          : [],
       showlegend: true,
       legend: {
         orientation: "h",
