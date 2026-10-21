@@ -961,7 +961,9 @@ function updateTable() {
   }
 
 
-  resultsBody.innerHTML = summary.map(row => {
+  resultsBody.innerHTML = [...summary]
+  .sort((a, b) => b.latestACH - a.latestACH)
+  .map(row => {
 
     const status =
       getDeteriorationStatus(row);
