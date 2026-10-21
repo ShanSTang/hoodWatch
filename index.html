@@ -137,12 +137,20 @@
     <article class="panel chart-panel chart-wide">
         <div class="section-heading">
           <div>
-            <h2>Minimum Air Changes Per Hour by Hood Over Time</h2>
+            <h2 id="heatmapTitle">ACH by Hood and Inspection Period</h2>
             <p class="muted">
-              Select a building to compare inspection readings over time.
-  Each marker represents one inspection.
+              Select a building and measurement to compare inspection readings.
+              Each marker represents one inspection.
             </p>
           </div>
+        
+          <label>
+            Measurement
+            <select id="heatmapMetric" disabled aria-label="Select chart measurement">
+              <option value="ach">ACH</option>
+              <option value="faceVelocity">Face velocity</option>
+            </select>
+          </label>
         </div>
         <div id="heatmapChart" class="chart heatmap-chart"></div>
       </article>
