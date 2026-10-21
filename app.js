@@ -1412,9 +1412,23 @@ function updateHeatmapChart() {
          size: 10,
          opacity: 0.85,
          line: {
-           color: "#ffffff",
-           width: 0.5
-         }
+          color: yValues.map(y => {
+            if (metric === "ach") {
+              return (y < 200 || y > 400)
+                ? "rgba(239, 68, 68, 0.8)"
+                : "rgba(0, 0, 0, 0.15)";
+            }
+      
+            if (metric === "face velocity") {
+              return (y < 80 || y > 120)
+                ? "rgba(239, 68, 68, 0.8)"
+                : "rgba(0, 0, 0, 0.15)";
+            }
+      
+            return "rgba(0, 0, 0, 0.15)";
+          }),
+          width: 1.5
+        }
        },
       customdata: periodRecords.map(record => [
         record.building,
