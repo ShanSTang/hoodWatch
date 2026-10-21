@@ -52,6 +52,8 @@ const heatmapChart = document.getElementById("heatmapChart");
 const resultsBody = document.getElementById("resultsBody");
 const tableCount = document.getElementById("tableCount");
 
+const heatmapMetric = document.getElementById("heatmapMetric");
+const heatmapTitle = document.getElementById("heatmapTitle");
 
 /* ---------------------------------------------------------
    Required columns
@@ -1277,7 +1279,17 @@ function rankingValue(row, metric) {
 
 function updateHeatmapChart() {
   const selectedBuilding = buildingFilter.value;
+   const metric = heatmapMetric.value || "ach";
 
+   const metricField =
+     metric === "faceVelocity" ? "faceVelocity" : "ach";
+   
+   const metricLabel =
+     metric === "faceVelocity" ? "Face velocity" : "ACH";
+   
+   heatmapTitle.textContent =
+     `${metricLabel} by Hood and Inspection Period`;
+   
   if (!selectedBuilding) {
     Plotly.react(
       heatmapChart,
@@ -1304,12 +1316,16 @@ function updateHeatmapChart() {
   }
 
   // Keep every inspection, not just the latest per hood.
+   
   const records = filteredRecords
-    .filter(record => record.building === selectedBuilding)
-    .sort((a, b) =>
-      naturalSort(a.hood, b.hood) ||
-      a.date - b.date
-    );
+     .filter(record =>
+       record.building === selectedBuilding &&
+       Number.isFinite(record[metricField])
+     )
+     .sort((a, b) =>
+       naturalSort(a.hood, b.hood) ||
+       a.date - b.date
+     );
 
   if (!records.length) {
     Plotly.react(
@@ -1391,7 +1407,7 @@ function updateHeatmapChart() {
        x: periodRecords.map(
          record => hoodPosition.get(record.hoodKey)
        ),
-       y: periodRecords.map(record => record.ach),
+       y: periodRecords.map(record => record[metricField]),
        marker: {
          color: yearColor(period, periodIndex, periods.length),
          size: 10,
@@ -1406,14 +1422,14 @@ function updateHeatmapChart() {
         record.lab,
         record.hood,
         record.date,
-        record.ach
+        record[metricField]
       ]),
       hovertemplate:
         "<b>%{customdata[2]}</b><br>" +
         "Building: %{customdata[0]}<br>" +
         "Lab: %{customdata[1]}<br>" +
         "Inspection date: %{customdata[3]|%b %d, %Y}<br>" +
-        "ACH: %{customdata[4]:.1f}<br>" +
+        `${metricLabel}: %{customdata[4]:.2f}<br>` +
         "Period: " + period +
         "<extra></extra>"
     };
@@ -1442,11 +1458,13 @@ function updateHeatmapChart() {
         zeroline: false
       },
       yaxis: {
-        title: "Air changes per hour (ACH)",
+        title: metric === "faceVelocity"
+          ? "Face velocity"
+          : "Air changes per hour (ACH)",
         rangemode: "tozero",
         autorange: true
       },
-       shapes: [
+       shapes: metric === "ach" ? [
         {
           type: "rect",
           xref: "paper",
@@ -1462,7 +1480,7 @@ function updateHeatmapChart() {
           },
           layer: "below"
         }
-      ],
+      ] : [],
       showlegend: true,
       legend: {
         orientation: "h",
@@ -1475,6 +1493,11 @@ function updateHeatmapChart() {
     plotConfig()
   );
 }
+
+heatmapMetric.addEventListener(
+  "change",
+  updateHeatmapChart
+);
 
 /* ---------------------------------------------------------
    Export
@@ -1676,6 +1699,11 @@ clearBtn.addEventListener(
 
 function clearData() {
 
+  heatmapMetric.value = "ach";
+   heatmapMetric.disabled = true;
+   heatmapTitle.textContent =
+     "ACH by Hood and Inspection Period";
+   
   allRecords = [];
   filteredRecords = [];
   summary = [];
@@ -1766,6 +1794,7 @@ function enableControls(enabled) {
   rankMetric.disabled = false;
   hoodFilter.disabled = false;
 
+  heatmapMetric.disabled = !enabled;
   clearBtn.disabled = !enabled;
   exportBtn.disabled = !enabled;
   resetFiltersBtn.disabled = !enabled;
