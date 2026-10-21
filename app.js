@@ -40,6 +40,7 @@ const kpiHoods = document.getElementById("kpiHoods");
 const kpiFlagged = document.getElementById("kpiFlagged");
 const kpiBuildings = document.getElementById("kpiBuildings");
 const kpiLabs = document.getElementById("kpiLabs");
+const kpiVAVFailing = document.getElementById("kpiVAVFailing");
 
 const flagCount = document.getElementById("flagCount");
 const hoodList = document.getElementById("hoodList");
@@ -741,7 +742,28 @@ function getDeteriorationStatus(row) {
     reasons
   };
 }
+/*---------------------------------------------------------
+   Get VAV failure Counts
+   ---------------------------------------------------------
+*/
 
+function getVAVFailureStatus(row) {
+  if (!Number.isFinite(row.latestACH)) {
+    return {
+      failing: false,
+      reason: "No valid latest ACH measurement"
+    };
+  }
+
+  const failing = row.latestACH < 200 || row.latestACH > 400;
+
+  return {
+    failing,
+    reason: failing
+      ? "Latest ACH outside the 200–400 range"
+      : "Latest ACH within the acceptable range"
+  };
+}
 
 /* ---------------------------------------------------------
    Update dashboard
@@ -772,6 +794,11 @@ function updateKPIs() {
     row => getDeteriorationStatus(row).flagged
   );
 
+  const failingVAVSystems = new Set(
+     summary
+        .filter(row=> getVAVFailureStatus(row).failing)
+        map(row => row.hoodKey)
+  )
   const buildings = new Set(
     summary.map(row => row.building)
   );
@@ -785,6 +812,8 @@ function updateKPIs() {
 
   kpiFlagged.textContent =
     flagged.length.toLocaleString();
+   kpiVAVFailing.textContent=
+      failingVAVSystems.size.toLocaleString();
 
   kpiBuildings.textContent =
     buildings.size.toLocaleString();
