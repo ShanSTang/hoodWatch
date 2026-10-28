@@ -1399,7 +1399,6 @@ function updateHeatmapChart() {
       "#3b82f6", // Blue
       "#a855f7", // Purple
       "#06b6d4", // Cyan
-      "#ec4899", // Pink
       "#84cc16", // Lime
       "#f97316", // Dark orange
       "#6366f1"  // Indigo
