@@ -503,6 +503,51 @@ td { color: #34445c; }
   margin: 7px 0 0;
 }
 
+.yearly-pass-summary {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.yearly-pass-summary h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.yearly-pass-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.yearly-pass-table th,
+.yearly-pass-table td {
+  padding: 10px;
+  text-align: right;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.yearly-pass-table th:first-child,
+.yearly-pass-table td:first-child {
+  text-align: left;
+}
+
+.below-range {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.within-range {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.above-range {
+  color: #d97706;
+  font-weight: 600;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
