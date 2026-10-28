@@ -1402,9 +1402,9 @@ function updateHeatmapChart() {
   // Generate distinct colors automatically for any number of years.
   function yearColor(year, index, total) {
     const palette = [
-      "#3b82f6", // Blue
+      "#C0CA33", // Blue
       "#a855f7", // Purple
-      "#06b6d4", // Cyan
+      "#FFAB91", // Peach
       "#84cc16", // Lime
       "#f97316", // Dark orange
       "#6366f1"  // Indigo
