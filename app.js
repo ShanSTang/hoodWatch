@@ -64,7 +64,7 @@ const REQUIRED_COLUMNS = [
   "Hood",
   "Date",
   "Min ACH",
-  "FaceV Flow"
+  "FaceV Avg"
 ];
 
 
@@ -99,6 +99,23 @@ function parseACH(value) {
   return Number.isFinite(number) ? number : NaN;
 }
 
+function parsePercentage(value) {
+  if (value === null || value === undefined || value === "") {
+    return NaN;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value * 100 : NaN;
+  }
+
+  const cleaned = String(value)
+    .replace(/,/g, "")
+    .replace(/[^\d.+\-eE]/g, "");
+
+  const number = Number(cleaned);
+
+  return Number.isFinite(number) ? number * 100 : NaN;
+}
 
 /*
  * Convert dates to a consistent YYYY-MM-DD representation
@@ -339,7 +356,8 @@ function parseRows(rows) {
 
     const date = parseDate(row["Date"]);
     const ach = parseACH(row["Min ACH"]);
-    const faceVelocity = parseACH(row["FaceV Flow"]); 
+    const cov = parsePercentage(row["Average_Zone_COV"]);
+    const faceVelocity = parseACH(row["FaceV Avg"]); 
 
     if (!date || !Number.isFinite(ach)) {
       return;
