@@ -359,9 +359,12 @@ function parseRows(rows) {
     const cov = parsePercentage(row["Average_Zone_COV"]);
     const faceVelocity = parseACH(row["FaceV Avg"]); 
 
-    if (!date || !Number.isFinite(ach)) {
-      return;
-    }
+    if (
+        !date ||
+        (!Number.isFinite(ach) && !Number.isFinite(faceVelocity))
+      ) {
+        return;
+      }
 
     /*
      * Equivalent to:
@@ -373,16 +376,16 @@ function parseRows(rows) {
       `${building} | ${lab} | ${hood}`;
 
     parsed.push({
-      rowNumber: index + 2,
-      building,
-      lab,
-      hood,
-      date,
-      dateString: dateKey(date),
-      ach,
-      faceVelocity,
-      hoodKey
-    });
+        rowNumber: index + 2,
+        building,
+        lab,
+        hood,
+        date,
+        dateString: dateKey(date),
+        ach: Number.isFinite(ach) ? ach : null,
+        faceVelocity: Number.isFinite(faceVelocity) ? faceVelocity : null,
+        hoodKey
+      });
   });
 
   return parsed;
@@ -537,11 +540,18 @@ function applyFilters() {
 function calculateSummary(records) {
 
   /*
-   * Equivalent to:
-   *
-   * df.sort_values(["Hood Key", "Date"])
+   * Only ACH records participate in the ACH summary.
+   * Face-velocity-only records remain available in filteredRecords
+   * for the face-velocity heatmap.
    */
-  const sorted = [...records].sort((a, b) => {
+  const achRecords = records.filter(
+    record => Number.isFinite(record.ach)
+  );
+
+  /*
+   * Sort by Hood Key and Date
+   */
+  const sorted = [...achRecords].sort((a, b) => {
     const hoodCompare = naturalSort(a.hoodKey, b.hoodKey);
 
     if (hoodCompare !== 0) {
@@ -551,12 +561,8 @@ function calculateSummary(records) {
     return a.date - b.date;
   });
 
-
   /*
-   * Equivalent to:
-   *
-   * df.groupby("Hood Key")["ACH"].shift(1)
-   * df.groupby("Hood Key")["ACH"].transform("first")
+   * Group ACH records by Hood Key
    */
   const groups = new Map();
 
@@ -568,69 +574,65 @@ function calculateSummary(records) {
     groups.get(record.hoodKey).push(record);
   });
 
-
+  /*
+   * Calculate baseline and previous ACH
+   */
   const enriched = [];
 
   for (const [hoodKey, hoodRecords] of groups) {
-     let previousSum = 0;
-     let previousCount = 0;
-   
-     hoodRecords.forEach((record, index) => {
-       // Average of all records BEFORE this inspection
-       const baselineACH =
-         previousCount > 0
-           ? previousSum / previousCount
-           : null;
-   
-       const previousACH =
-         index > 0
-           ? hoodRecords[index - 1].ach
-           : null;
-   
-       // Positive values indicate ACH increased vs. baseline
-       const dropBaseline =
-         baselineACH !== null
-           ? record.ach - baselineACH
-           : null;
-   
-       const dropPrevious =
-         previousACH !== null
-           ? record.ach - previousACH
-           : null;
-   
-       const dropPercentBaseline =
-         baselineACH !== null && baselineACH > 0
-           ? 100 * (record.ach - baselineACH) / baselineACH
-           : null;
-   
-       const dropPercentPrevious =
-         previousACH !== null && previousACH > 0
-           ? 100 * (record.ach - previousACH) / previousACH
-           : null;
-   
-       enriched.push({
-         ...record,
-         previousACH,
-         baselineACH,
-         achDropPrevious: dropPrevious,
-         achDropBaseline: dropBaseline,
-         achDropPercentPrevious: dropPercentPrevious,
-         achDropPercentBaseline: dropPercentBaseline
-       });
-   
-       // Add the current inspection AFTER calculating its baseline
-       previousSum += record.ach;
-       previousCount++;
-     });
-   }
 
+    let previousSum = 0;
+    let previousCount = 0;
+
+    hoodRecords.forEach((record, index) => {
+
+      const baselineACH =
+        previousCount > 0
+          ? previousSum / previousCount
+          : null;
+
+      const previousACH =
+        index > 0
+          ? hoodRecords[index - 1].ach
+          : null;
+
+      const dropBaseline =
+        baselineACH !== null
+          ? record.ach - baselineACH
+          : null;
+
+      const dropPrevious =
+        previousACH !== null
+          ? record.ach - previousACH
+          : null;
+
+      const dropPercentBaseline =
+        baselineACH !== null && baselineACH > 0
+          ? 100 * (record.ach - baselineACH) / baselineACH
+          : null;
+
+      const dropPercentPrevious =
+        previousACH !== null && previousACH > 0
+          ? 100 * (record.ach - previousACH) / previousACH
+          : null;
+
+      enriched.push({
+        ...record,
+        previousACH,
+        baselineACH,
+        achDropPrevious: dropPrevious,
+        achDropBaseline: dropBaseline,
+        achDropPercentPrevious: dropPercentPrevious,
+        achDropPercentBaseline: dropPercentBaseline
+      });
+
+      previousSum += record.ach;
+      previousCount++;
+    });
+  }
 
   /*
-   * Latest record for each hood.
-   *
-   * Equivalent to:
-   *
-   * groupby("Hood Key").tail(1)
+   * Latest ACH record for each hood
    */
   const latestRecords = [];
 
@@ -640,7 +642,9 @@ function calculateSummary(records) {
     );
   }
 
-
+  /*
+   * Build summary
+   */
   const results = latestRecords.map(latest => {
 
     const hoodRecords = groups.get(latest.hoodKey);
@@ -667,51 +671,39 @@ function calculateSummary(records) {
 
       baselineACH:
         enrichedLatest?.baselineACH ?? null,
-      latestACH: latest.ach,
+
+      latestACH:
+        latest.ach,
 
       previousACH:
         enrichedLatest?.previousACH ?? null,
 
       achDropBaseline:
         enrichedLatest?.achDropBaseline ?? null,
-      
-      achDropPercentBaseline:
-        enrichedLatest?.achDropPercentBaseline ?? null,
-
-      achDropBaseline:
-        enrichedLatest?.achDropBaseline ?? 0,
 
       achDropPercentBaseline:
         enrichedLatest?.achDropPercentBaseline ?? null,
+
+      achDropPrevious:
+        enrichedLatest?.achDropPrevious ?? null,
+
+      achDropPercentPrevious:
+        enrichedLatest?.achDropPercentPrevious ?? null,
 
       inspectionCount,
 
-      /*
-       * Equivalent to:
-       *
-       * summary["Trend Available"] =
-       * summary["Inspection Count"] >= 2
-       */
-      trendAvailable: inspectionCount >= 2
+      trendAvailable:
+        inspectionCount >= 2
     };
   });
 
-
   /*
-   * Worst deterioration first.
-   *
-   * Equivalent to:
-   *
-   * sort_values(
-   *   "ACH Drop vs Baseline",
-   *   ascending=False
-   * )
+   * Highest latest ACH first
    */
   return results.sort(
     (a, b) => b.latestACH - a.latestACH
   );
 }
-
 
 /* ---------------------------------------------------------
    Deterioration rules
@@ -1302,6 +1294,7 @@ function rankingValue(row, metric) {
 function setGreenBoxDefaults() {
   const y0Input = document.getElementById("greenY0");
   const y1Input = document.getElementById("greenY1");
+  const metric = heatmapMetric.value || "ach";
 
   if (metric === "ach") {
     y0Input.value = 200;
@@ -1709,14 +1702,11 @@ endDate.addEventListener(
   applyFilters
 );
 
-hoodFilter.addEventListener(
-  "change",
-  () => {
-
+hoodFilter.addEventListener("change", () => {
     selectedHoodKey = hoodFilter.value;
-
      updateTrendChart();
      updateFaceVelocityChart();
+     updateHeatmapChart();
   }
 );
 
