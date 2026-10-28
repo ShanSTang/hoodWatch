@@ -59,12 +59,12 @@ const heatmapTitle = document.getElementById("heatmapTitle");
    --------------------------------------------------------- */
 
 const REQUIRED_COLUMNS = [
-  "Building ID",
-  "Lab ID",
-  "Hood ID",
+  "Building",
+  "Lab",
+  "Hood",
   "Date",
-  "ACH",
-   "Face velocity"
+  "Min ACH",
+  "FaceV Flow"
 ];
 
 
@@ -323,23 +323,23 @@ function parseRows(rows) {
 
   rows.forEach((row, index) => {
     const building = normalizeValue(
-      row["Building ID"],
+      row["Building"],
       "Unknown Building"
     );
 
     const lab = normalizeValue(
-      row["Lab ID"],
+      row["Lab"],
       "Unknown Lab"
     );
 
     const hood = normalizeValue(
-      row["Hood ID"],
+      row["Hood"],
       "Unknown Hood"
     );
 
     const date = parseDate(row["Date"]);
-    const ach = parseACH(row["ACH"]);
-    const faceVelocity = parseACH(row["Face velocity"]); 
+    const ach = parseACH(row["Min ACH"]);
+    const faceVelocity = parseACH(row["FaceV Flow"]); 
 
     if (!date || !Number.isFinite(ach)) {
       return;
