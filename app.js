@@ -1299,6 +1299,19 @@ function rankingValue(row, metric) {
    Heatmap
    --------------------------------------------------------- */
 
+function setGreenBoxDefaults() {
+  const y0Input = document.getElementById("greenY0");
+  const y1Input = document.getElementById("greenY1");
+
+  if (metric === "ach") {
+    y0Input.value = 200;
+    y1Input.value = 400;
+  } else if (metric === "faceVelocity") {
+    y0Input.value = 80;
+    y1Input.value = 120;
+  }
+}
+
 function updateHeatmapChart() {
   const selectedBuilding = buildingFilter.value;
    const metric = heatmapMetric.value || "ach";
@@ -1498,43 +1511,44 @@ function updateHeatmapChart() {
         rangemode: "tozero",
         autorange: true
       },
-       shapes:metric === "ach"
-          ? [
-              {
-                type: "rect",
-                xref: "paper",
-                x0: 0,
-                x1: 1,
-                yref: "y",
-                y0: 200,
-                y1: 400,
-                fillcolor: "rgba(34, 197, 94, 0.20)",
-                line: {
-                  color: "rgba(34, 197, 94, 0.5)",
-                  width: 1
-                },
-                layer: "below"
-              }
-            ]
-          : metric === "faceVelocity"
-          ? [
-              {
-                type: "rect",
-                xref: "paper",
-                x0: 0,
-                x1: 1,
-                yref: "y",
-                y0: 80,
-                y1: 120,
-                fillcolor: "rgba(34, 197, 94, 0.20)",
-                line: {
-                  color: "rgba(34, 197, 94, 0.5)",
-                  width: 1
-                },
-                layer: "below"
-              }
-            ]
-          : [],
+          shapes:
+           metric === "ach"
+             ? [
+                 {
+                   type: "rect",
+                   xref: "paper",
+                   x0: 0,
+                   x1: 1,
+                   yref: "y",
+                   y0: Number(document.getElementById("greenY0").value),
+                   y1: Number(document.getElementById("greenY1").value),
+                   fillcolor: "rgba(34, 197, 94, 0.20)",
+                   line: {
+                     color: "rgba(34, 197, 94, 0.5)",
+                     width: 1
+                   },
+                   layer: "below"
+                 }
+               ]
+             : metric === "faceVelocity"
+             ? [
+                 {
+                   type: "rect",
+                   xref: "paper",
+                   x0: 0,
+                   x1: 1,
+                   yref: "y",
+                   y0: Number(document.getElementById("greenY0").value),
+                   y1: Number(document.getElementById("greenY1").value),
+                   fillcolor: "rgba(34, 197, 94, 0.20)",
+                   line: {
+                     color: "rgba(34, 197, 94, 0.5)",
+                     width: 1
+                   },
+                   layer: "below"
+                 }
+               ]
+             : [],
       showlegend: true,
       legend: {
         orientation: "h",
@@ -1548,10 +1562,10 @@ function updateHeatmapChart() {
   );
 }
 
-heatmapMetric.addEventListener(
-  "change",
-  updateHeatmapChart
-);
+heatmapMetric.addEventListener("change", () => {
+   setGreenBoxDefaults();
+   updateHeatmapChart();
+});
 
 /* ---------------------------------------------------------
    Export
@@ -1675,6 +1689,13 @@ labFilter.addEventListener(
   "change",
   applyFilters
 );
+
+document.getElementById("updateGreenBox").onclick = () => {
+   const y0 = Number(document.getElementById("greenY0").value);
+   const y1 = Number(document.getElementById("greenY1").value);
+
+   updateHeatmapChart();
+}
 
 
 startDate.addEventListener(
