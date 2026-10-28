@@ -572,53 +572,57 @@ function calculateSummary(records) {
   const enriched = [];
 
   for (const [hoodKey, hoodRecords] of groups) {
-
-    const firstACH = hoodRecords[0].ach;
-
-    hoodRecords.forEach((record, index) => {
-
-      const previousACH =
-        index > 0
-          ? hoodRecords[index - 1].ach
-          : null;
-
-      /*
-       * Positive numbers mean ACH worsened,
-       * matching the Python code.
-       */
-      const dropPrevious =
-        previousACH !== null
-          ? record.ach - previousACH
-          : null;
-
-      const dropBaseline =
-        record.ach - firstACH;
-
-
-      const dropPercentPrevious =
-        previousACH !== null && previousACH > 0
-          ? 100 * (record.ach - previousACH) / previousACH
-          : null;
-      
-      const dropPercentBaseline =
-        firstACH > 0
-          ? 100 * (record.ach - firstACH) / firstACH
-          : null;
-
-      enriched.push({
-        ...record,
-
-        previousACH,
-        firstACH,
-
-        achDropPrevious: dropPrevious,
-        achDropBaseline: dropBaseline,
-
-        achDropPercentPrevious: dropPercentPrevious,
-        achDropPercentBaseline: dropPercentBaseline
-      });
-    });
-  }
+     let previousSum = 0;
+     let previousCount = 0;
+   
+     hoodRecords.forEach((record, index) => {
+       // Average of all records BEFORE this inspection
+       const baselineACH =
+         previousCount > 0
+           ? previousSum / previousCount
+           : null;
+   
+       const previousACH =
+         index > 0
+           ? hoodRecords[index - 1].ach
+           : null;
+   
+       // Positive values indicate ACH increased vs. baseline
+       const dropBaseline =
+         baselineACH !== null
+           ? record.ach - baselineACH
+           : null;
+   
+       const dropPrevious =
+         previousACH !== null
+           ? record.ach - previousACH
+           : null;
+   
+       const dropPercentBaseline =
+         baselineACH !== null && baselineACH > 0
+           ? 100 * (record.ach - baselineACH) / baselineACH
+           : null;
+   
+       const dropPercentPrevious =
+         previousACH !== null && previousACH > 0
+           ? 100 * (record.ach - previousACH) / previousACH
+           : null;
+   
+       enriched.push({
+         ...record,
+         previousACH,
+         baselineACH,
+         achDropPrevious: dropPrevious,
+         achDropBaseline: dropBaseline,
+         achDropPercentPrevious: dropPercentPrevious,
+         achDropPercentBaseline: dropPercentBaseline
+       });
+   
+       // Add the current inspection AFTER calculating its baseline
+       previousSum += record.ach;
+       previousCount++;
+     });
+   }
 
 
   /*
@@ -661,17 +665,18 @@ function calculateSummary(records) {
       firstInspection: first.date,
       latestInspection: latest.date,
 
-      baselineACH: first.ach,
+      baselineACH:
+        enrichedLatest?.baselineACH ?? null,
       latestACH: latest.ach,
 
       previousACH:
         enrichedLatest?.previousACH ?? null,
 
-      achDropPrevious:
-        enrichedLatest?.achDropPrevious ?? 0,
-
-      achDropPercentPrevious:
-        enrichedLatest?.achDropPercentPrevious ?? null,
+      achDropBaseline:
+        enrichedLatest?.achDropBaseline ?? null,
+      
+      achDropPercentBaseline:
+        enrichedLatest?.achDropPercentBaseline ?? null,
 
       achDropBaseline:
         enrichedLatest?.achDropBaseline ?? 0,
