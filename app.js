@@ -1560,6 +1560,145 @@ heatmapMetric.addEventListener("change", () => {
    updateHeatmapChart();
 });
 
+/* -----------------------------
+
+*/
+
+function updateYearlyPassSummary() {
+  const container = document.getElementById("yearlyPassContent");
+  const building = buildingFilter.value;
+  const metric = heatmapMetric.value || "ach";
+
+  if (!building) {
+    container.textContent = "Select a building to view yearly results.";
+    return;
+  }
+
+  const metricField =
+    metric === "faceVelocity" ? "faceVelocity" : "ach";
+
+  const metricLabel =
+    metric === "faceVelocity" ? "Face Velocity" : "ACH";
+
+  const lowerLimit = metric === "faceVelocity" ? 80 : 200;
+  const upperLimit = metric === "faceVelocity" ? 120 : 400;
+
+  const start = startDate.value
+    ? new Date(`${startDate.value}T00:00:00`)
+    : null;
+
+  const end = endDate.value
+    ? new Date(`${endDate.value}T23:59:59.999`)
+    : null;
+
+  // Keep the summary consistent with the active dashboard filters.
+  const records = allRecords.filter(record =>
+    record.building === building &&
+    (!labFilter.value || record.lab === labFilter.value) &&
+    (!start || record.date >= start) &&
+    (!end || record.date <= end) &&
+    Number.isFinite(record[metricField])
+  );
+
+  // Keep the latest valid measurement for each hood in each year.
+  const latestByHoodYear = new Map();
+
+  records.forEach(record => {
+    const year = record.date.getFullYear();
+    const key = `${year}|${record.hoodKey}`;
+    const existing = latestByHoodYear.get(key);
+
+    if (!existing || record.date > existing.date ||
+        (record.date.getTime() === existing.date.getTime() &&
+         record.rowNumber > existing.rowNumber)) {
+      latestByHoodYear.set(key, record);
+    }
+  });
+
+  const yearly = new Map();
+
+  latestByHoodYear.forEach(record => {
+    const year = record.date.getFullYear();
+
+    if (!yearly.has(year)) {
+      yearly.set(year, {
+        below: 0,
+        within: 0,
+        above: 0,
+        total: 0
+      });
+    }
+
+    const stats = yearly.get(year);
+    const value = record[metricField];
+
+    stats.total++;
+
+    if (value < lowerLimit) {
+      stats.below++;
+    } else if (value > upperLimit) {
+      stats.above++;
+    } else {
+      stats.within++;
+    }
+  });
+
+  if (!yearly.size) {
+    container.textContent =
+      `No ${metricLabel} measurements match the current filters.`;
+    return;
+  }
+
+  const percentage = (count, total) =>
+    total ? `${(count / total * 100).toFixed(1)}%` : "—";
+
+  const years = [...yearly.keys()].sort((a, b) => a - b);
+
+  container.innerHTML = `
+    <p>
+      ${escapeHTML(building)} · ${metricLabel} ·
+      Passing range: ${lowerLimit}–${upperLimit}
+    </p>
+    <div style="overflow-x:auto">
+      <table class="yearly-pass-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Hoods Tested</th>
+            <th>Below Range</th>
+            <th>Within Range</th>
+            <th>Above Range</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${years.map(year => {
+            const s = yearly.get(year);
+
+            return `
+              <tr>
+                <td>${year}</td>
+                <td>${s.total}</td>
+                <td class="below-range">
+                  ${percentage(s.below, s.total)}
+                  (${s.below})
+                </td>
+                <td class="within-range">
+                  ${percentage(s.within, s.total)}
+                  (${s.within})
+                </td>
+                <td class="above-range">
+                  ${percentage(s.above, s.total)}
+                  (${s.above})
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 /* ---------------------------------------------------------
    Export
    --------------------------------------------------------- */
