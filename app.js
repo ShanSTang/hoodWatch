@@ -793,6 +793,7 @@ function updateAllVisuals() {
   updateTrendChart();
   updateFaceVelocityChart();
   updateHeatmapChart();
+  updateYearlyPassSummary();
 }
 
 function updateHeatmap() {
@@ -1558,6 +1559,7 @@ function updateHeatmapChart() {
 heatmapMetric.addEventListener("change", () => {
    setGreenBoxDefaults();
    updateHeatmapChart();
+   updateYearlyPassSummary();
 });
 
 /* -----------------------------
@@ -1893,6 +1895,9 @@ clearBtn.addEventListener(
    --------------------------------------------------------- */
 
 function clearData() {
+
+   document.getElementById("yearlyPassContent").textContent =
+  "Select a building to view yearly results.";
 
   heatmapMetric.value = "ach";
    heatmapMetric.disabled = true;
