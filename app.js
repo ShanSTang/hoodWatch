@@ -1218,19 +1218,28 @@ function updateTrendChart() {
 
 
   const shapes = [];
+  var achMin = 200;
+  var achMax = 400
+
+  if (heatmapMetric.value == "ach") {
+     achMin = document.getElementById("greenY0").value
+     achMax = document.getElementById("greenY1").value
+  }
 
   if (selectedSummary) {
 
     shapes.push({
-      type: "line",
+      type: "rect",
       x0: records[0].date,
       x1: records[records.length - 1].date,
-      y0: selectedSummary.baselineACH,
-      y1: selectedSummary.baselineACH,
+      y0: achMin,
+      y1: achMax,
+      fillcolor: "rgba(34, 197, 94, 0.20)",
       line: {
-        dash: "dash",
-        width: 1
-      }
+         color: "rgba(34, 197, 94, 0.5)",
+         width: 1
+      },
+      layer: "below"
     });
   }
 
@@ -1922,6 +1931,7 @@ document.getElementById("updateGreenBox").onclick = () => {
    const y0 = Number(document.getElementById("greenY0").value);
    const y1 = Number(document.getElementById("greenY1").value);
 
+   updateTrendChart();
    updateHeatmapChart();
    updateYearlyPassSummary();
 }
