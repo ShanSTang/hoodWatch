@@ -1396,31 +1396,31 @@ function updateHeatmapChart() {
   }
 
   // Discover all years present in the filtered records.
-  const periods = [...new Set(
-    records.map(record => getInspectionPeriod(record.date))
-  )].sort((a, b) => Number(a) - Number(b));
-
-  // Generate distinct colors automatically for any number of years.
-  function yearColor(year, index, total) {
-    const palette = [
-      "#C0CA33", // Blue
-      "#a855f7", // Purple
-      "#FFAB91", // Peach
-      "#84cc16", // Lime
-      "#f97316", // Dark orange
-      "#6366f1"  // Indigo
-    ];
-
-    if (index < palette.length) {
-      return palette[index];
-    }
-
-    // Continue generating colors for additional years.
-    const hue = (Number(year) * 137.508) % 360;
-    return `hsl(${hue}, 65%, 45%)`;
-  }
-
-  const traces = periods.map((period, periodIndex) => {
+   const periods = [...new Set(
+     records.map(record => getInspectionPeriod(record.date))
+   )].sort((a, b) => Number(a) - Number(b));
+   
+   // Assign a distinct marker shape to each year.
+   function yearShape(index) {
+     const shapes = [
+       "circle",
+       "square",
+       "diamond",
+       "triangle-up",
+       "cross",
+       "star",
+       "hexagon",
+       "triangle-down"
+     ];
+   
+     return shapes[index % shapes.length];
+   }
+   
+   // Get user-defined minimum and maximum values.
+   const minValue = Number(y0Input.value);
+   const maxValue = Number(y1Input.value);
+   
+   const traces = periods.map((period, periodIndex) => {
      const periodRecords = records.filter(
        record => getInspectionPeriod(record.date) === period
      );
@@ -1429,52 +1429,52 @@ function updateHeatmapChart() {
        type: "scatter",
        mode: "markers",
        name: period,
+   
        x: periodRecords.map(
          record => hoodPosition.get(record.hoodKey)
        ),
+   
        y: periodRecords.map(record => record[metricField]),
+   
        marker: {
-        color: yearColor(period, periodIndex, periods.length),
-        size: 10,
-        opacity: 0.85,
-        line: {
-          color: periodRecords.map(record => {
-            const value = record[metricField];
-      
-            if (metric === "ach") {
-              return (value < 200 || value > 400)
-                ? "rgba(240, 71, 52, 0.8)"
-                : "rgba(0, 0, 0, 0.15)";
-            }
-      
-            if (metric === "faceVelocity") {
-              return (value < 80 || value > 120)
-                ? "rgba(240, 71, 52, 0.8)"
-                : "rgba(0, 0, 0, 0.15)";
-            }
-      
-            return "rgba(0, 0, 0, 0.15)";
-          }),
-          width: 2
-        }
-      },
-      customdata: periodRecords.map(record => [
-        record.building,
-        record.lab,
-        record.hood,
-        record.date,
-        record[metricField]
-      ]),
-      hovertemplate:
-        "<b>%{customdata[2]}</b><br>" +
-        "Building: %{customdata[0]}<br>" +
-        "Lab: %{customdata[1]}<br>" +
-        "Inspection date: %{customdata[3]|%b %d, %Y}<br>" +
-        `${metricLabel}: %{customdata[4]:.2f}<br>` +
-        "Period: " + period +
-        "<extra></extra>"
-    };
-  });
+         symbol: yearShape(periodIndex),
+   
+         // Red if outside user-defined limits; green otherwise.
+         color: periodRecords.map(record => {
+           const value = Number(record[metricField]);
+   
+           return (value < minValue || value > maxValue)
+             ? "#ef4444"
+             : "#22c55e";
+         }),
+   
+         size: 10,
+         opacity: 0.85,
+   
+         line: {
+           color: "rgba(0, 0, 0, 0.25)",
+           width: 1
+         }
+       },
+   
+       customdata: periodRecords.map(record => [
+         record.building,
+         record.lab,
+         record.hood,
+         record.date,
+         record[metricField]
+       ]),
+   
+       hovertemplate:
+         "<b>%{customdata[2]}</b><br>" +
+         "Building: %{customdata[0]}<br>" +
+         "Lab: %{customdata[1]}<br>" +
+         "Inspection date: %{customdata[3]|%b %d, %Y}<br>" +
+         `${metricLabel}: %{customdata[4]:.2f}<br>` +
+         "Period: " + period +
+         "<extra></extra>"
+     };
+   });
 
   Plotly.react(
     heatmapChart,
