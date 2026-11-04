@@ -556,6 +556,26 @@ td { color: #34445c; }
   font-weight: 600;
 }
 
+#resultsBody.closest("table") th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+#resultsBody.closest("table") th[data-sort]:hover {
+  background-color: rgba(59, 130, 246, 0.12);
+}
+
+#resultsBody.closest("table") th.sort-asc::after {
+  content: " ▲";
+  color: #3b82f6;
+}
+
+#resultsBody.closest("table") th.sort-desc::after {
+  content: " ▼";
+  color: #3b82f6;
+}
+
 footer {
   display: flex;
   justify-content: space-between;
