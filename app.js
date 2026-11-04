@@ -14,6 +14,9 @@ let filteredRecords = [];
 let summary = [];
 let selectedHoodKey = "";
 
+let sortColumn = "building";
+let sortDirection = "asc";
+
 
 /* ---------------------------------------------------------
    DOM
@@ -1034,6 +1037,56 @@ function updateHoodSelector() {
 /* ---------------------------------------------------------
    Inspection table
    --------------------------------------------------------- */
+/*Sorting table*/
+
+function sortSummary(data) {
+
+  return [...data].sort((a, b) => {
+
+    let valueA;
+    let valueB;
+
+    switch (sortColumn) {
+
+      case "status":
+        valueA = getDeteriorationStatus(a).flagged ? 1 : 0;
+        valueB = getDeteriorationStatus(b).flagged ? 1 : 0;
+        break;
+
+      case "building":
+      case "lab":
+      case "hood":
+        valueA = a[sortColumn] || "";
+        valueB = b[sortColumn] || "";
+        break;
+
+      case "firstInspection":
+      case "latestInspection":
+        valueA = a[sortColumn]?.getTime() ?? -Infinity;
+        valueB = b[sortColumn]?.getTime() ?? -Infinity;
+        break;
+
+      default:
+        valueA = a[sortColumn] ?? -Infinity;
+        valueB = b[sortColumn] ?? -Infinity;
+    }
+
+    let comparison;
+
+    if (
+      typeof valueA === "string" &&
+      typeof valueB === "string"
+    ) {
+      comparison = naturalSort(valueA, valueB);
+    } else {
+      comparison = valueA - valueB;
+    }
+
+    return sortDirection === "asc"
+      ? comparison
+      : -comparison;
+  });
+}
 
 function updateTable() {
 
@@ -1051,10 +1104,8 @@ function updateTable() {
 
     return;
   }
-
-
-  resultsBody.innerHTML = [...summary]
-  .sort((a, b) => b.latestACH - a.latestACH)
+   
+  resultsBody.innerHTML = sortSummary(summary)
   .map(row => {
 
     const status =
@@ -1933,7 +1984,26 @@ hoodFilter.addEventListener("change", () => {
   }
 );
 
+document.querySelectorAll(
+  "#resultsBody.closest('table') th[data-sort]"
+).forEach(header => {
 
+  header.addEventListener("click", () => {
+
+    const column = header.dataset.sort;
+
+    if (sortColumn === column) {
+      sortDirection =
+        sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      sortColumn = column;
+      sortDirection = "asc";
+    }
+
+    updateTable();
+  });
+
+});
 resetFiltersBtn.addEventListener(
   "click",
   () => {
