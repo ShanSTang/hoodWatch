@@ -1432,6 +1432,7 @@ function updateHeatmapChart() {
        type: "scatter",
        mode: "markers",
        name: period,
+       showlegend: false,
    
        x: periodRecords.map(
          record => hoodPosition.get(record.hoodKey)
