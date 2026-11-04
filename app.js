@@ -543,30 +543,20 @@ function applyFilters() {
 function calculateSummary(records) {
 
   /*
-   * Only ACH records participate in the ACH summary.
-   * Face-velocity-only records remain available in filteredRecords
-   * for the face-velocity heatmap.
+   * Group ALL inspection records by Hood Key.
+   * Do not exclude records with missing ACH or face velocity.
    */
-  const achRecords = records.filter(
-    record => Number.isFinite(record.ach)
-  );
 
-  /*
-   * Sort by Hood Key and Date
-   */
-  const sorted = [...achRecords].sort((a, b) => {
+  const sorted = [...records].sort((a, b) => {
     const hoodCompare = naturalSort(a.hoodKey, b.hoodKey);
 
     if (hoodCompare !== 0) {
       return hoodCompare;
     }
 
-    return a.date - b.date;
+    return a.date - b.date || a.rowNumber - b.rowNumber;
   });
 
-  /*
-   * Group ACH records by Hood Key
-   */
   const groups = new Map();
 
   sorted.forEach(record => {
@@ -577,135 +567,152 @@ function calculateSummary(records) {
     groups.get(record.hoodKey).push(record);
   });
 
+
   /*
-   * Calculate baseline and previous ACH
+   * Build one summary row per hood.
    */
-  const enriched = [];
+
+  const results = [];
 
   for (const [hoodKey, hoodRecords] of groups) {
 
-    let previousSum = 0;
-    let previousCount = 0;
-
-    hoodRecords.forEach((record, index) => {
-
-      const baselineACH =
-        previousCount > 0
-          ? previousSum / previousCount
-          : null;
-
-      const previousACH =
-        index > 0
-          ? hoodRecords[index - 1].ach
-          : null;
-
-      const dropBaseline =
-        baselineACH !== null
-          ? record.ach - baselineACH
-          : null;
-
-      const dropPrevious =
-        previousACH !== null
-          ? record.ach - previousACH
-          : null;
-
-      const dropPercentBaseline =
-        baselineACH !== null && baselineACH > 0
-          ? 100 * (record.ach - baselineACH) / baselineACH
-          : null;
-
-      const dropPercentPrevious =
-        previousACH !== null && previousACH > 0
-          ? 100 * (record.ach - previousACH) / previousACH
-          : null;
-
-      enriched.push({
-        ...record,
-        previousACH,
-        baselineACH,
-        achDropPrevious: dropPrevious,
-        achDropBaseline: dropBaseline,
-        achDropPercentPrevious: dropPercentPrevious,
-        achDropPercentBaseline: dropPercentBaseline
-      });
-
-      previousSum += record.ach;
-      previousCount++;
-    });
-  }
-
-  /*
-   * Latest ACH record for each hood
-   */
-  const latestRecords = [];
-
-  for (const hoodRecords of groups.values()) {
-    latestRecords.push(
-      hoodRecords[hoodRecords.length - 1]
-    );
-  }
-
-  /*
-   * Build summary
-   */
-  const results = latestRecords.map(latest => {
-
-    const hoodRecords = groups.get(latest.hoodKey);
-
+    // All inspection records are already chronological.
     const first = hoodRecords[0];
+    const latest = hoodRecords[hoodRecords.length - 1];
 
-    const enrichedLatest = enriched.find(
-      record =>
-        record.hoodKey === latest.hoodKey &&
-        record.rowNumber === latest.rowNumber
+    /*
+     * Find all valid ACH measurements.
+     */
+    const achRecords = hoodRecords.filter(
+      record => Number.isFinite(record.ach)
     );
 
-    const inspectionCount = hoodRecords.length;
+    /*
+     * Find all valid face velocity measurements.
+     */
+    const faceVelocityRecords = hoodRecords.filter(
+      record => Number.isFinite(record.faceVelocity)
+    );
 
-    return {
-      hoodKey: latest.hoodKey,
+    /*
+     * Latest valid measurement for each metric.
+     */
+    const latestACHRecord =
+      achRecords.length
+        ? achRecords[achRecords.length - 1]
+        : null;
 
-      hood: latest.hood,
+    const latestFaceVelocityRecord =
+      faceVelocityRecords.length
+        ? faceVelocityRecords[faceVelocityRecords.length - 1]
+        : null;
+
+    /*
+     * Calculate ACH comparisons using valid ACH records only.
+     */
+    const previousACHRecord =
+      achRecords.length >= 2
+        ? achRecords[achRecords.length - 2]
+        : null;
+
+    const previousACH =
+      previousACHRecord?.ach ?? null;
+
+    let baselineACH = null;
+
+    if (achRecords.length >= 2) {
+
+      const previousRecords = achRecords.slice(0, -1);
+
+      const previousSum = previousRecords.reduce(
+        (sum, record) => sum + record.ach,
+        0
+      );
+
+      baselineACH = previousSum / previousRecords.length;
+    }
+
+    const latestACH =
+      latestACHRecord?.ach ?? null;
+
+    const achDropBaseline =
+      latestACH !== null && baselineACH !== null
+        ? latestACH - baselineACH
+        : null;
+
+    const achDropPrevious =
+      latestACH !== null && previousACH !== null
+        ? latestACH - previousACH
+        : null;
+
+    const achDropPercentBaseline =
+      baselineACH !== null && baselineACH > 0
+        ? 100 * (latestACH - baselineACH) / baselineACH
+        : null;
+
+    const achDropPercentPrevious =
+      previousACH !== null && previousACH > 0
+        ? 100 * (latestACH - previousACH) / previousACH
+        : null;
+
+
+    /*
+     * Store one summary row for this hood.
+     */
+    results.push({
+
+      hoodKey,
+
       building: latest.building,
       lab: latest.lab,
+      hood: latest.hood,
 
+      // First and last inspection dates, regardless of metric availability.
+      firstTestDate: first.date,
+      lastTestDate: latest.date,
+
+      // Preserve existing field names for table compatibility.
       firstInspection: first.date,
       latestInspection: latest.date,
 
-      baselineACH:
-        enrichedLatest?.baselineACH ?? null,
+      // Latest available measurements, independently.
+      latestACH,
+      latestFaceVelocity:
+        latestFaceVelocityRecord?.faceVelocity ?? null,
 
-      latestACH:
-        latest.ach,
+      // ACH comparison fields retained for existing dashboard logic.
+      baselineACH,
+      previousACH,
 
-      previousACH:
-        enrichedLatest?.previousACH ?? null,
+      achDropBaseline,
+      achDropPercentBaseline,
 
-      achDropBaseline:
-        enrichedLatest?.achDropBaseline ?? null,
+      achDropPrevious,
+      achDropPercentPrevious,
 
-      achDropPercentBaseline:
-        enrichedLatest?.achDropPercentBaseline ?? null,
+      // Total inspections, including records with neither measurement.
+      inspectionCount: hoodRecords.length,
 
-      achDropPrevious:
-        enrichedLatest?.achDropPrevious ?? null,
+      // Number of valid measurements for each metric.
+      achInspectionCount: achRecords.length,
+      faceVelocityInspectionCount: faceVelocityRecords.length,
 
-      achDropPercentPrevious:
-        enrichedLatest?.achDropPercentPrevious ?? null,
+      trendAvailable: achRecords.length >= 2
+    });
+  }
 
-      inspectionCount,
-
-      trendAvailable:
-        inspectionCount >= 2
-    };
-  });
 
   /*
-   * Highest latest ACH first
+   * Sort highest latest ACH first.
+   * Hoods without ACH measurements appear at the bottom.
    */
-  return results.sort(
-    (a, b) => b.latestACH - a.latestACH
-  );
+  return results.sort((a, b) => {
+
+    if (a.latestACH === null) return 1;
+    if (b.latestACH === null) return -1;
+
+    return b.latestACH - a.latestACH;
+  });
 }
 
 /* ---------------------------------------------------------
