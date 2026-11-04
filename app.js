@@ -1308,7 +1308,10 @@ function setGreenBoxDefaults() {
 
 function updateHeatmapChart() {
   const selectedBuilding = buildingFilter.value;
-   const metric = heatmapMetric.value || "ach";
+  const metric = heatmapMetric.value || "ach";
+
+  const y0Input = document.getElementById("greenY0");
+  const y1Input = document.getElementById("greenY1");
 
    const metricField =
      metric === "faceVelocity" ? "faceVelocity" : "ach";
@@ -1416,8 +1419,6 @@ function updateHeatmapChart() {
      return shapes[index % shapes.length];
    }
 
-   
-   
    // Get user-defined minimum and maximum values.
    const minValue = Number(y0Input.value);
    const maxValue = Number(y1Input.value);
@@ -1849,7 +1850,6 @@ hoodFilter.addEventListener("change", () => {
     selectedHoodKey = hoodFilter.value;
      updateTrendChart();
      updateFaceVelocityChart();
-     setGreenBoxDefaults();
      updateHeatmapChart();
   }
 );
