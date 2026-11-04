@@ -1984,26 +1984,37 @@ hoodFilter.addEventListener("change", () => {
   }
 );
 
-document.querySelectorAll(
-  "#resultsBody.closest('table') th[data-sort]"
-).forEach(header => {
+const resultsTable = resultsBody.closest("table");
 
-  header.addEventListener("click", () => {
+resultsTable.querySelectorAll("thead th[data-sort]")
+  .forEach(header => {
 
-    const column = header.dataset.sort;
+    header.addEventListener("click", () => {
 
-    if (sortColumn === column) {
-      sortDirection =
-        sortDirection === "asc" ? "desc" : "asc";
-    } else {
-      sortColumn = column;
-      sortDirection = "asc";
-    }
+      const column = header.dataset.sort;
 
-    updateTable();
+      if (sortColumn === column) {
+        sortDirection =
+          sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        sortColumn = column;
+        sortDirection = "asc";
+      }
+
+      updateTable();
+
+      // Update sorting indicators.
+      resultsTable.querySelectorAll("th[data-sort]")
+        .forEach(th => {
+          th.classList.remove("sort-asc", "sort-desc");
+        });
+
+      header.classList.add(
+        sortDirection === "asc" ? "sort-asc" : "sort-desc"
+      );
+    });
   });
 
-});
 resetFiltersBtn.addEventListener(
   "click",
   () => {
