@@ -1423,7 +1423,7 @@ function updateHeatmapChart() {
    const minValue = Number(y0Input.value);
    const maxValue = Number(y1Input.value);
    
-   const traces = periods.map((period, periodIndex) => {
+   let traces = periods.map((period, periodIndex) => {
      const periodRecords = records.filter(
        record => getInspectionPeriod(record.date) === period
      );
@@ -1477,6 +1477,23 @@ function updateHeatmapChart() {
          "Period: " + period +
          "<extra></extra>"
      };
+   });
+
+   periods.forEach((period, periodIndex) => {
+     traces.push({
+       type: "scatter",
+       mode: "markers",
+       name: period,
+       x: [null],
+       y: [null],
+       marker: {
+         symbol: yearShape(periodIndex),
+         color: "#64748b",
+         size: 10
+       },
+       showlegend: true,
+       hoverinfo: "skip"
+     });
    });
 
   Plotly.react(
