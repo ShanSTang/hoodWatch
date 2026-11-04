@@ -1324,21 +1324,30 @@ function updateFaceVelocityChart() {
       "Face velocity: %{y:.2f}<extra></extra>"
   };
 
-  // Show the first recorded face velocity as a baseline.
-  const baseline = records[0].faceVelocity;
+  var velMin = 80;
+  var velMax = 120
 
-  const shapes = [{
-    type: "line",
-    x0: records[0].date,
-    x1: records[records.length - 1].date,
-    y0: baseline,
-    y1: baseline,
-    line: {
-      dash: "dash",
-      width: 1,
-      color: "#94a3b8"
-    }
-  }];
+  if (heatmapMetric.value == "faceVelocity") {
+     achMin = document.getElementById("greenY0").value
+     achMax = document.getElementById("greenY1").value
+  }
+
+  if (selectedSummary) {
+
+    shapes.push({
+      type: "rect",
+      x0: records[0].date,
+      x1: records[records.length - 1].date,
+      y0: achMin,
+      y1: achMax,
+      fillcolor: "rgba(34, 197, 94, 0.20)",
+      line: {
+         color: "rgba(34, 197, 94, 0.5)",
+         width: 1
+      },
+      layer: "below"
+    });
+  }
 
   const layout = {
     ...baseChartLayout(
