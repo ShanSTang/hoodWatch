@@ -11,7 +11,7 @@
   <!-- Libraries load in the browser; inspection files are not sent to a server. -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="app.js" defer></script>
+  <script src="app2.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -241,16 +241,13 @@
         <table>
           <thead>
             <tr>
-              <th data-sort="building">Building ↕</th>
-              <th data-sort="lab">Lab ↕</th>
-              <th data-sort="hood">Hood ↕</th>
-              <th data-sort="date1">First date ↕</th>
-              <th data-sort="currentDate">Latest date ↕</th>
-              <th data-sort="firstACH">Baseline ACH ↕</th>
-              <th data-sort="latestACH">Latest ACH ↕</th>
-              <th data-sort="change">Change ↕</th>
-              <th data-sort="pctChange">Change % ↕</th>
-              <th>Status / reason</th>
+              <th data-sort="building">Building</th>
+              <th data-sort="lab">Lab</th>
+              <th data-sort="hood">Hood</th>
+              <th data-sort="firstInspection">First Testing Date</th>
+              <th data-sort="latestInspection">Latest Test Date</th>
+              <th data-sort="latestACH">Latest ACH</th>
+              <th data-sort="latestFaceVelocity">Latest Face Velocity</th>
             </tr>
           </thead>
           <tbody id="resultsBody">
