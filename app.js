@@ -1103,88 +1103,44 @@ function updateTable() {
   if (!summary.length) {
     resultsBody.innerHTML = `
       <tr>
-        <td colspan="10" class="empty-cell">
+        <td colspan="7" class="empty-cell">
           No inspection records match the current filters.
         </td>
       </tr>
     `;
-
     return;
   }
-   
+
   resultsBody.innerHTML = sortSummary(summary)
-  .map(row => {
+    .map(row => {
 
-    const status =
-      getDeteriorationStatus(row);
+      return `
+        <tr>
+          <td>${escapeHTML(row.building)}</td>
 
-    let statusHTML;
+          <td>${escapeHTML(row.lab)}</td>
 
-    if (!row.trendAvailable) {
-      statusHTML =
-        `<span class="status-neutral">
-           Insufficient history
-         </span>`;
-    } else if (status.flagged) {
-      statusHTML =
-        `<span class="status-danger">
-           Flagged
-         </span>
-         <small>
-           ${status.reasons
-             .map(reason => escapeHTML(reason))
-             .join("<br>")}
-         </small>`;
-    } else {
-      statusHTML =
-        `<span class="status-good">
-           No flag
-         </span>`;
-    }
+          <td>
+            <button
+              class="table-hood-button"
+              data-hood-key="${escapeHTML(row.hoodKey)}"
+              type="button"
+            >
+              ${escapeHTML(row.hood)}
+            </button>
+          </td>
 
+          <td>${formatDate(row.firstTestDate)}</td>
 
-    const changeClass =
-      row.achDropBaseline > 0
-        ? "danger-text"
-        : row.achDropBaseline < 0
-          ? "positive-text"
-          : "";
+          <td>${formatDate(row.lastTestDate)}</td>
 
+          <td>${formatNumber(row.latestACH, 1)}</td>
 
-    return `
-      <tr>
-        <td>${escapeHTML(row.building)}</td>
-        <td>${escapeHTML(row.lab)}</td>
-        <td>
-          <button
-            class="table-hood-button"
-            data-hood-key="${escapeHTML(row.hoodKey)}"
-            type="button"
-          >
-            ${escapeHTML(row.hood)}
-          </button>
-        </td>
+          <td>${formatNumber(row.latestFaceVelocity, 2)}</td>
+        </tr>
+      `;
 
-        <td>${formatDate(row.firstInspection)}</td>
-        <td>${formatDate(row.latestInspection)}</td>
-
-        <td>${formatNumber(row.baselineACH, 1)}</td>
-        <td>${formatNumber(row.latestACH, 1)}</td>
-
-        <td class="${changeClass}">
-          ${formatNumber(row.achDropBaseline, 1)}
-        </td>
-
-        <td class="${changeClass}">
-          ${formatPercent(row.achDropPercentBaseline)}
-        </td>
-
-        <td>${statusHTML}</td>
-      </tr>
-    `;
-
-  }).join("");
-
+    }).join("");
 
   resultsBody
     .querySelectorAll(".table-hood-button")
@@ -1192,14 +1148,13 @@ function updateTable() {
 
       button.addEventListener("click", () => {
 
-        selectedHoodKey =
-          button.dataset.hoodKey;
+        selectedHoodKey = button.dataset.hoodKey;
 
-        hoodFilter.value =
-          selectedHoodKey;
+        hoodFilter.value = selectedHoodKey;
 
         updateTrendChart();
-         
+        updateFaceVelocityChart();
+
         trendChart.scrollIntoView({
           behavior: "smooth",
           block: "center"
@@ -2121,7 +2076,7 @@ function clearData() {
 
   resultsBody.innerHTML = `
     <tr>
-      <td colspan="10" class="empty-cell">
+      <td colspan="7" class="empty-cell">
         Upload a file to view results.
       </td>
     </tr>
