@@ -1588,8 +1588,8 @@ function updateYearlyPassSummary() {
   const metricLabel =
     metric === "faceVelocity" ? "Face Velocity" : "ACH";
 
-  const lowerLimit = y0Input;
-  const upperLimit = y1Input;
+  const lowerLimit = Number(y0Input.value);
+  const upperLimit = Number(y1Input.value);
 
   const start = startDate.value
     ? new Date(`${startDate.value}T00:00:00`)
