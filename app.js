@@ -1479,22 +1479,6 @@ function updateHeatmapChart() {
      };
    });
 
-   periods.forEach((period, periodIndex) => {
-     traces.push({
-       type: "scatter",
-       mode: "markers",
-       name: period,
-       x: [null],
-       y: [null],
-       marker: {
-         symbol: yearShape(periodIndex),
-         color: "#64748b",
-         size: 10
-       },
-       hoverinfo: "skip"
-     });
-   });
-
   Plotly.react(
     heatmapChart,
     traces,
