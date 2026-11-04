@@ -807,7 +807,7 @@ function updateHeatmap() {
 
 function updateKPIs() {
 
-  const flagged = summary.filter(
+  /*const flagged = summary.filter(
     row => getDeteriorationStatus(row).flagged
   );
 
@@ -839,7 +839,50 @@ function updateKPIs() {
     labs.size.toLocaleString();
 
   flagCount.textContent =
-    `${flagged.length} flagged`;
+    `${flagged.length} flagged`;*/
+
+  const monitoredHoods = new Set(
+    filteredRecords.map(record => record.hoodKey)
+  );
+
+  const buildings = new Set(
+    filteredRecords.map(record => record.building)
+  );
+
+  const labs = new Set(
+    filteredRecords.map(
+      record => `${record.building} | ${record.lab}`
+    )
+  );
+
+  // ACH analytics still use summary.
+  const flagged = summary.filter(
+    row => getDeteriorationStatus(row).flagged
+  );
+
+  const failingVAVSystems = new Set(
+    summary
+      .filter(row => getVAVFailureStatus(row).failing)
+      .map(row => row.hoodKey)
+  );
+
+  kpiHoods.textContent =
+    monitoredHoods.size.toLocaleString();
+
+  kpiBuildings.textContent =
+    buildings.size.toLocaleString();
+
+  kpiLabs.textContent =
+    labs.size.toLocaleString();
+
+  kpiFlagged.textContent =
+    flagged.length.toLocaleString();
+
+  kpiVAVFailing.textContent =
+    failingVAVSystems.size.toLocaleString();
+
+  flagCount.textContent =
+    `${flagged.length} flagged`; 
 }
 
 
@@ -930,7 +973,7 @@ function updateFlaggedHoods() {
 
 function updateHoodSelector() {
 
-  const previous = selectedHoodKey;
+  /*const previous = selectedHoodKey;
 
   const sorted = [...summary].sort(
     (a, b) => naturalSort(a.hoodKey, b.hoodKey)
@@ -952,6 +995,38 @@ function updateHoodSelector() {
     hoodFilter.value = previous;
   } else {
     selectedHoodKey = "";
+  } */
+   const previous = selectedHoodKey;
+
+  // Get every unique hood from filtered records.
+  const hoods = new Map();
+
+  filteredRecords.forEach(record => {
+    if (!hoods.has(record.hoodKey)) {
+      hoods.set(record.hoodKey, record);
+    }
+  });
+
+  const sorted = [...hoods.entries()].sort(
+    (a, b) => naturalSort(a[0], b[0])
+  );
+
+  hoodFilter.innerHTML =
+    `<option value="">Select a hood</option>` +
+    sorted.map(([key, record]) => `
+      <option value="${escapeHTML(key)}">
+        ${escapeHTML(key)}
+      </option>
+    `).join("");
+
+  if (
+    previous &&
+    hoods.has(previous)
+  ) {
+    hoodFilter.value = previous;
+  } else {
+    selectedHoodKey = "";
+    hoodFilter.value = "";
   }
 }
 
