@@ -1432,7 +1432,6 @@ function updateHeatmapChart() {
        type: "scatter",
        mode: "markers",
        name: period,
-       showlegend: false,
    
        x: periodRecords.map(
          record => hoodPosition.get(record.hoodKey)
@@ -1492,7 +1491,6 @@ function updateHeatmapChart() {
          color: "#64748b",
          size: 10
        },
-       showlegend: true,
        hoverinfo: "skip"
      });
    });
