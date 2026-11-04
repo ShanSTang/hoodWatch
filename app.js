@@ -1332,9 +1332,7 @@ function updateFaceVelocityChart() {
      achMax = document.getElementById("greenY1").value
   }
 
-  if (selectedSummary) {
-
-    shapes.push({
+  const shapes = [{
       type: "rect",
       x0: records[0].date,
       x1: records[records.length - 1].date,
@@ -1346,8 +1344,7 @@ function updateFaceVelocityChart() {
          width: 1
       },
       layer: "below"
-    });
-  }
+  }];
 
   const layout = {
     ...baseChartLayout(
