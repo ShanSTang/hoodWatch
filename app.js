@@ -1945,6 +1945,7 @@ document.getElementById("updateGreenBox").onclick = () => {
    const y1 = Number(document.getElementById("greenY1").value);
 
    updateTrendChart();
+   updateFaceVelocityChart();
    updateHeatmapChart();
    updateYearlyPassSummary();
 }
