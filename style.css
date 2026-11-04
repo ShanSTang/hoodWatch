@@ -265,6 +265,10 @@ h2 {
   white-space: pre-wrap;
 }
 
+.yearly-pass-summary {
+  backgroud: white;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr));
