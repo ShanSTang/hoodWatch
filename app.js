@@ -1335,18 +1335,23 @@ function updateFaceVelocityChart() {
   // Show the first recorded face velocity as a baseline.
   const baseline = records[0].faceVelocity;
 
-  const shapes = [{
-    type: "line",
-    x0: records[0].date,
-    x1: records[records.length - 1].date,
-    y0: baseline,
-    y1: baseline,
-    line: {
-      dash: "dash",
-      width: 1,
-      color: "#94a3b8"
-    }
-  }];
+  const shapes = [
+     {
+       type: "rect",
+       xref: "paper",
+       x0: 0,
+       x1: 1,
+       yref: "y",
+       y0: velMin,
+       y1: velMax,
+       fillcolor: "rgba(34, 197, 94, 0.20)",
+       line: {
+         color: "rgba(34, 197, 94, 0.5)",
+         width: 1
+       },
+       layer: "below"
+     }
+   ];
 
   const layout = {
     ...baseChartLayout(
