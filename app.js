@@ -1574,6 +1574,9 @@ function updateYearlyPassSummary() {
   const building = buildingFilter.value;
   const metric = heatmapMetric.value || "ach";
 
+  const y0Input = document.getElementById("greenY0");
+  const y1Input = document.getElementById("greenY1");
+
   if (!building) {
     container.textContent = "Select a building to view yearly results.";
     return;
@@ -1585,8 +1588,8 @@ function updateYearlyPassSummary() {
   const metricLabel =
     metric === "faceVelocity" ? "Face Velocity" : "ACH";
 
-  const lowerLimit = metric === "faceVelocity" ? 80 : 200;
-  const upperLimit = metric === "faceVelocity" ? 120 : 400;
+  const lowerLimit = y0Input;
+  const upperLimit = y1Input;
 
   const start = startDate.value
     ? new Date(`${startDate.value}T00:00:00`)
