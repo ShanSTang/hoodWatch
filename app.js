@@ -1415,6 +1415,8 @@ function updateHeatmapChart() {
    
      return shapes[index % shapes.length];
    }
+
+   
    
    // Get user-defined minimum and maximum values.
    const minValue = Number(y0Input.value);
@@ -1847,6 +1849,7 @@ hoodFilter.addEventListener("change", () => {
     selectedHoodKey = hoodFilter.value;
      updateTrendChart();
      updateFaceVelocityChart();
+     setGreenBoxDefaults();
      updateHeatmapChart();
   }
 );
