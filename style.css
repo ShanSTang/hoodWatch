@@ -266,7 +266,11 @@ h2 {
 }
 
 .yearly-pass-summary {
-  backgroud: white;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: 0 2px 7px rgba(23, 43, 77, .025);
 }
 
 .filter-grid {
