@@ -1835,6 +1835,7 @@ document.getElementById("updateGreenBox").onclick = () => {
    const y1 = Number(document.getElementById("greenY1").value);
 
    updateHeatmapChart();
+   updateYearlyPassSummary();
 }
 
 
