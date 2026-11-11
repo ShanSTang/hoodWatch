@@ -772,6 +772,70 @@ function getDeteriorationStatus(row) {
     reasons
   };
 }
+
+/*---------------------------------------------------------
+   Get Face Velocity Deterioration
+   ---------------------------------------------------------
+*/
+
+function getFaceVelocityDeteriorationStatus(hoodKey) {
+
+  const min = greenBoxRanges.faceVelocity.min;
+  const max = greenBoxRanges.faceVelocity.max;
+
+  // Get valid face velocity measurements for this hood.
+  const records = filteredRecords
+    .filter(record =>
+      record.hoodKey === hoodKey &&
+      Number.isFinite(record.faceVelocity)
+    )
+    .sort((a, b) =>
+      a.date - b.date ||
+      a.rowNumber - b.rowNumber
+    );
+
+  if (records.length < 2) {
+    return { flagged: false };
+  }
+
+  // Keep only the final valid measurement of each year.
+  const latestByYear = new Map();
+
+  records.forEach(record => {
+    const year = record.date.getFullYear();
+    latestByYear.set(year, record);
+  });
+
+  const annualRecords = [...latestByYear.values()];
+
+  // Must have measurements from at least two years.
+  if (annualRecords.length < 2) {
+    return { flagged: false };
+  }
+
+  // Most recent valid face velocity measurement.
+  const latest = annualRecords[annualRecords.length - 1];
+
+  // Only compare against earlier years.
+  const previousYears = annualRecords.slice(0, -1);
+
+  const latestOutsideGreen =
+    latest.faceVelocity < min ||
+    latest.faceVelocity > max;
+
+  const previouslyGreen = previousYears.some(record =>
+    record.faceVelocity >= min &&
+    record.faceVelocity <= max
+  );
+
+  return {
+    flagged: latestOutsideGreen && previouslyGreen,
+    latestFaceVelocity: latest.faceVelocity,
+    latestYear: latest.date.getFullYear(),
+    previouslyGreen
+  };
+}
+
 /*---------------------------------------------------------
    Get VAV failure Counts
    ---------------------------------------------------------
@@ -835,9 +899,9 @@ function updateKPIs() {
   );
 
   // ACH analytics still use summary.
-  const flagged = summary.filter(
-    row => getDeteriorationStatus(row).flagged
-  );
+  const flagged = summary.filter(row =>
+     getFaceVelocityDeteriorationStatus(row.hoodKey).flagged
+   );
 
   const failingVAVSystems = new Set(
     summary
@@ -1819,6 +1883,7 @@ document.getElementById("updateGreenBox").onclick = () => {
     greenBoxRanges[metric].min = y0;
     greenBoxRanges[metric].max = y1;
 
+    updateKPIs();
     updateTrendChart();
     updateFaceVelocityChart();
     updateHeatmapChart();
