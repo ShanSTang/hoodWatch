@@ -894,8 +894,8 @@ function updateKPIs() {
   kpiVAVFailing.textContent =
     failingVAVSystems.size.toLocaleString();
 
-  flagCount.textContent =
-    `${flagged.length} flagged`; 
+  /*flagCount.textContent =
+    `${flagged.length} flagged`; */
 }
 
 
