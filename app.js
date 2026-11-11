@@ -1224,8 +1224,8 @@ function updateTrendChart() {
 
   const shapes = [];
    
-  achMin = greenBoxRanges.ach.min;
-  achMax = greenBoxRanges.ach.max;
+  const achMin = greenBoxRanges.ach.min;
+  const achMax = greenBoxRanges.ach.max;
 
 
   if (selectedSummary) {
@@ -1325,8 +1325,8 @@ function updateFaceVelocityChart() {
       "<b>%{x|%b %d, %Y}</b><br>" +
       "Face velocity: %{y:.2f}<extra></extra>"
   };
-  velMin = greenBoxRanges.faceVelocity.min;
-  velMax = greenBoxRanges.faceVelocity.max;
+  const velMin = greenBoxRanges.faceVelocity.min;
+  const velMax = greenBoxRanges.faceVelocity.max;
   
   // Show the first recorded face velocity as a baseline.
   const baseline = records[0].faceVelocity;
