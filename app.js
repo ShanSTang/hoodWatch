@@ -1006,8 +1006,8 @@ function sortSummary(data) {
     switch (sortColumn) {
 
       case "status":
-        valueA = getDeteriorationStatus(a).flagged ? 1 : 0;
-        valueB = getDeteriorationStatus(b).flagged ? 1 : 0;
+        valueA = getFaceVelocityDeteriorationStatus(a).flagged ? 1 : 0;
+        valueB = getFaceVelocityDeteriorationStatus(b).flagged ? 1 : 0;
         break;
 
       case "building":
@@ -1764,7 +1764,7 @@ exportBtn.addEventListener("click", () => {
   const exportRows = summary.map(row => {
 
     const status =
-      getDeteriorationStatus(row);
+      getFaceVelocityDeteriorationStatus(row);
 
 
     return {
