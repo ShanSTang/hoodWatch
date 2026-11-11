@@ -304,6 +304,7 @@ async function processFile(file) {
     allRecords = parsed;
 
     initializeFilters();
+    setGreenBoxDefaults()
     applyFilters();
 
     fileStatus.textContent = file.name;
@@ -1224,18 +1225,14 @@ function updateTrendChart() {
 
   const shapes = [];
    
-  const achMin = greenBoxRanges.ach.min;
-  const achMax = greenBoxRanges.ach.max;
-
-
   if (selectedSummary) {
 
     shapes.push({
       type: "rect",
       x0: records[0].date,
       x1: records[records.length - 1].date,
-      y0: achMin,
-      y1: achMax,
+      y0: greenBoxRanges.ach.min,
+      y1: greenBoxRanges.ach.max,
       fillcolor: "rgba(34, 197, 94, 0.20)",
       line: {
          color: "rgba(34, 197, 94, 0.5)",
@@ -1325,9 +1322,7 @@ function updateFaceVelocityChart() {
       "<b>%{x|%b %d, %Y}</b><br>" +
       "Face velocity: %{y:.2f}<extra></extra>"
   };
-  const velMin = greenBoxRanges.faceVelocity.min;
-  const velMax = greenBoxRanges.faceVelocity.max;
-  
+   
   // Show the first recorded face velocity as a baseline.
   const baseline = records[0].faceVelocity;
 
@@ -1338,8 +1333,8 @@ function updateFaceVelocityChart() {
        x0: 0,
        x1: 1,
        yref: "y",
-       y0: velMin,
-       y1: velMax,
+       y0: greenBoxRanges.faceVelocity.min,
+       y1: greenBoxRanges.faceVelocity.max,
        fillcolor: "rgba(34, 197, 94, 0.20)",
        line: {
          color: "rgba(34, 197, 94, 0.5)",
