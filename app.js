@@ -44,8 +44,6 @@ const kpiBuildings = document.getElementById("kpiBuildings");
 const kpiLabs = document.getElementById("kpiLabs");
 const kpiVAVFailing = document.getElementById("kpiVAVFailing");
 
-const flagCount = document.getElementById("flagCount");
-const hoodList = document.getElementById("hoodList");
 
 const trendChart = document.getElementById("trendChart");
 const rankingChart = document.getElementById("rankingChart");
@@ -803,7 +801,6 @@ function getVAVFailureStatus(row) {
 
 function updateAllVisuals() {
   updateKPIs();
-  updateFlaggedHoods();
   updateHoodSelector();
   updateTable();
   updateTrendChart();
@@ -901,86 +898,6 @@ function updateKPIs() {
     `${flagged.length} flagged`; 
 }
 
-
-/* ---------------------------------------------------------
-   Flagged hood list
-   --------------------------------------------------------- */
-
-function updateFlaggedHoods() {
-
-  const flagged = summary.filter(
-    row => getDeteriorationStatus(row).flagged
-  );
-
-  if (!flagged.length) {
-    hoodList.innerHTML = `
-      <div class="empty-state">
-        No hoods currently meet the deterioration rules.
-      </div>
-    `;
-    return;
-  }
-
-
-  hoodList.innerHTML = flagged.map(row => {
-
-    const status = getDeteriorationStatus(row);
-
-    return `
-      <button
-        class="hood-item"
-        data-hood-key="${escapeHTML(row.hoodKey)}"
-        type="button"
-      >
-        <div class="hood-item-main">
-          <strong>${escapeHTML(row.hood)}</strong>
-          <span>
-            ${escapeHTML(row.building)} ·
-            ${escapeHTML(row.lab)}
-          </span>
-        </div>
-
-        <div class="hood-item-metric">
-          <strong>
-            ${formatNumber(row.achDropBaseline, 1)} ACH
-          </strong>
-          <span>
-            ${formatPercent(row.achDropPercentBaseline)}
-          </span>
-        </div>
-
-        <div class="hood-item-reason">
-          ${status.reasons
-            .map(reason => escapeHTML(reason))
-            .join(" · ")}
-        </div>
-      </button>
-    `;
-
-  }).join("");
-
-
-  hoodList.querySelectorAll(".hood-item")
-    .forEach(button => {
-
-      button.addEventListener("click", () => {
-
-        selectedHoodKey =
-          button.dataset.hoodKey;
-
-        hoodFilter.value =
-          selectedHoodKey;
-
-        updateTrendChart();
-        updateFaceVelocityChart();
-
-        trendChart.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
-      });
-    });
-}
 
 
 /* ---------------------------------------------------------
@@ -2082,16 +1999,7 @@ function clearData() {
   kpiLabs.textContent = "—";
   kpiVAVFailing.textContent = "—";
    
-  flagCount.textContent =
-    "0 flagged";
-
   tableCount.textContent = "";
-
-  hoodList.innerHTML = `
-    <div class="empty-state">
-      Upload inspection data to see flagged hoods.
-    </div>
-  `;
 
   resultsBody.innerHTML = `
     <tr>
