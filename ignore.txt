@@ -1,0 +1,16 @@
+<section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Hoods with Deteriorated VAV systems</h2>
+          <p class="muted">
+            Scroll the list to review flags, changes, and locations.
+          </p>
+        </div>
+        <span id="flagCount" class="status-pill status-danger">0 flagged</span>
+      </div>
+      <div id="hoodList" class="hood-list">
+        <div class="empty-state">
+          Upload inspection data to see flagged hoods.
+        </div>
+      </div>
+    </section>
