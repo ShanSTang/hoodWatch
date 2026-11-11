@@ -1324,13 +1324,13 @@ function updateFaceVelocityChart() {
       "Face velocity: %{y:.2f}<extra></extra>"
   };
 
-  var velMin = 80;
-  var velMax = 120
-
-  if (heatmapMetric.value == "faceVelocity") {
-     achMin = document.getElementById("greenY0").value
-     achMax = document.getElementById("greenY1").value
-  }
+  let velMin = 80;
+  let velMax = 120;
+   
+   if (heatmapMetric.value === "faceVelocity") {
+       velMin = Number(document.getElementById("greenY0").value);
+       velMax = Number(document.getElementById("greenY1").value);
+   }
 
   // Show the first recorded face velocity as a baseline.
   const baseline = records[0].faceVelocity;
