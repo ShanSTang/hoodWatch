@@ -1663,8 +1663,6 @@ function updateHeatmapChart() {
 
 heatmapMetric.addEventListener("change", () => {
    setGreenBoxDefaults();
-   updateTrendChart();
-   updateFaceVelocityChart();
    updateHeatmapChart();
    updateYearlyPassSummary();
 });
