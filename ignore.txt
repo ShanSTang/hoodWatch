@@ -1,4 +1,193 @@
-<section class="panel">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Private, browser-based laboratory hood ACH performance monitoring dashboard.">
+  <title>HoodWatch | Laboratory Performance</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Libraries load in the browser; inspection files are not sent to a server. -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">
+      <span class="brand-icon">H</span>
+      <span>
+        <strong>HoodWatch</strong>
+        <small>Laboratory Performance Monitor</small>
+      </span>
+    </a>
+    <div class="privacy-label">
+      <span class="privacy-dot"></span>
+      Processed locally in your browser
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page-heading">
+      <div>
+        <p class="eyebrow">FACILITIES · VENTILATION MONITORING</p>
+        <h1>Hood Performance Dashboard</h1>
+        <p class="muted">
+          Track ACH changes, identify deteriorating hoods, and compare
+          performance across buildings and labs.
+        </p>
+      </div>
+      <button id="exportBtn" class="button button-primary" disabled>
+        ↓ Export filtered CSV
+      </button>
+    </section>
+
+    <section class="upload-card panel">
+      <div class="section-heading">
+        <div>
+          <h2>Inspection data</h2>
+          <p class="muted">Upload a CSV or Excel workbook (.xlsx, .xls).</p>
+        </div>
+        <span id="fileStatus" class="status-pill">No file loaded</span>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="fileInput">
+        <span class="upload-icon">↑</span>
+        <strong>Choose a file or drag it here</strong>
+        <span class="muted">CSV, XLSX, or XLS · Processed on this device</span>
+        <input id="fileInput" type="file"
+               accept=".csv,.xlsx,.xls" hidden>
+      </label>
+
+      <div class="upload-footer">
+        <span id="recordInfo" class="muted">
+          Upload your inspection history to begin.
+        </span>
+        <button id="clearBtn" class="button button-secondary" disabled>
+          Clear data
+        </button>
+      </div>
+      <div id="errorMessage" class="error-message" role="alert" hidden></div>
+    </section>
+
+    <section class="kpi-grid" aria-label="Performance summary">
+      <article class="kpi-card panel">
+        <span class="kpi-label">Hoods monitored</span>
+        <strong id="kpiHoods">—</strong>
+        <span class="kpi-foot">In current selection</span>
+      </article>      
+      <article class="kpi-card panel">
+        <span class="kpi-label">Buildings</span>
+        <strong id="kpiBuildings">—</strong>
+        <span class="kpi-foot">In current selection</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">Labs</span>
+        <strong id="kpiLabs">—</strong>
+        <span class="kpi-foot">In current selection</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">VAV System Deteriorating</span>
+        <strong id="kpiFlagged" class="danger-text">—</strong>
+        <span class="kpi-foot">Worsened year over year</span>
+      </article>
+      <article class="kpi-card panel">
+        <span class="kpi-label">VAV Systems Failing</span>
+        <strong id="kpiVAVFailing" class="danger-text">—</strong>
+        <span class="kpi-foot">Based on each system's latest test</span>
+      </article>
+    </section>
+
+    <div id="yearlyPassSummary" class="yearly-pass-summary">
+      <h3>Yearly Fume Hood Passing-Range Summary</h3>
+      <div id="yearlyPassContent">
+        Select a building to view yearly results.
+      </div>
+  </div>
+
+    <section class="filter-card panel">
+      <div class="section-heading">
+        <div>
+          <h2>Filters</h2>
+          <p class="muted">Select a location and time period.</p>
+        </div>
+        <button id="resetFiltersBtn" class="text-button" disabled>
+          Reset filters
+        </button>
+      </div>
+
+      <div class="filter-grid">
+        <label>Building
+          <select id="buildingFilter" disabled>
+            <option value="">All buildings</option>
+          </select>
+        </label>
+        <label>Lab
+          <select id="labFilter" disabled>
+            <option value="">All labs</option>
+          </select>
+        </label>
+        <label>From date
+          <input id="startDate" type="date" disabled>
+        </label>
+        <label>To date
+          <input id="endDate" type="date" disabled>
+        </label>
+      </div>
+      <p class="filter-note">
+        Baseline and latest ACH are calculated within the selected date range.
+        At least two measurements are required to flag deterioration.
+      </p>
+    </section>
+
+    <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+      <label>
+        Green box minimum Y:
+        <input
+          type="number"
+          id="greenY0"
+          value="200"
+          step="any"
+        />
+      </label>
+    
+      <label>
+        Green box maximum Y:
+        <input
+          type="number"
+          id="greenY1"
+          value="400"
+          step="any"
+        />
+      </label>
+    
+      <button id="updateGreenBox">Update range</button>
+    </div>
+
+    <article class="panel chart-panel chart-wide">
+        <div class="section-heading">
+          <div>
+            <h2 id="heatmapTitle">Minimum ACH by Hood and Inspection Period</h2>
+            <p class="muted">
+              Select a building and measurement to compare inspection readings.
+              Each marker represents one inspection.
+            </p>
+          </div>
+        
+          <label>
+            Measurement
+            <select id="heatmapMetric" disabled 
+                    aria-label="Select chart measurement">
+              <option value="ach">ACH</option>
+              <option value="faceVelocity">Face velocity</option>
+            </select>
+          </label>
+        </div>
+        <div id="heatmapChart" class="chart heatmap-chart"></div>
+      </article>
+    
+    <section class="panel">
       <div class="section-heading">
         <div>
           <h2>Hoods with Deteriorated VAV systems</h2>
@@ -14,3 +203,88 @@
         </div>
       </div>
     </section>
+    <section class="chart-grid">
+      <article class="panel chart-panel">
+        <div class="section-heading">
+          <div>
+            <h2>ACH history</h2>
+            <p class="muted">Select a hood to inspect its history.</p>
+          </div>
+          <select id="hoodFilter" disabled aria-label="Select hood">
+            <option value="">Select a hood</option>
+          </select>
+        </div>
+        <div id="trendChart" class="chart"></div>
+      </article>
+
+      <article class="panel chart-panel">
+        <div class="section-heading">
+          <div>
+            <h2>Face Velocity History</h2>
+            <p class="muted">View face velocity measurements over time for the selected hood.</p>
+          </div>
+        </div>
+        <div id="rankingChart" class="chart"></div>
+      </article>
+    </section>
+    
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <h2>Inspection details</h2>
+          <p class="muted">Latest record within the selected date window.</p>
+        </div>
+        <span id="tableCount" class="muted"></span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="building">Building</th>
+              <th data-sort="lab">Lab</th>
+              <th data-sort="hood">Hood</th>
+              <th data-sort="firstInspection">First Testing Date</th>
+              <th data-sort="latestInspection">Latest Test Date</th>
+              <th data-sort="latestACH">Latest ACH</th>
+              <th data-sort="latestFaceVelocity">Latest Face Velocity</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="10" class="empty-cell">
+                Upload a file to view results.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rules-card panel">
+      <h2>How deterioration is flagged</h2>
+      <div class="rules-grid">
+        <div>
+          <span class="rule-number">01</span>
+          <strong>Minimum Flow ACH Inceased ≥ 100 ACH</strong>
+          <p>ACH at minimum flow increased by 100 air changes per hour or more.</p>
+        </div>
+        <div>
+          <span class="rule-number">02</span>
+          <strong>Crosses the 200–400 range</strong>
+          <p>Baseline is 200–400 inclusive and latest ACH is below 200 or above 400.</p>
+        </div>
+      </div>
+      <p class="muted small">
+        These are user-defined monitoring rules, not a determination of hood safety
+        or regulatory compliance. Verify any flagged result against applicable
+        facility procedures and qualified personnel.
+      </p>
+    </section>
+
+    
+    <footer>
+      <span>HoodWatch · Browser-based inspection analytics</span>
+    </footer>
+  </main>
+</body>
+</html>
