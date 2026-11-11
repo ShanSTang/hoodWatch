@@ -58,14 +58,8 @@ const heatmapMetric = document.getElementById("heatmapMetric");
 const heatmapTitle = document.getElementById("heatmapTitle");
 
 const greenBoxRanges = {
-    ach: {
-        min: 200,
-        max: 400
-    },
-    faceVelocity: {
-        min: 80,
-        max: 120
-    }
+    ach: { min: 200, max: 400 },
+    faceVelocity: { min: 80, max: 120 }
 };
 
 /* ---------------------------------------------------------
@@ -1229,13 +1223,10 @@ function updateTrendChart() {
 
 
   const shapes = [];
-  var achMin = 200;
-  var achMax = 400
+   
+  achMin = greenBoxRanges.ach.min;
+  achMax = greenBoxRanges.ach.max;
 
-  if (heatmapMetric.value == "ach") {
-     achMin = greenBoxRanges.ach.min;
-     achMax = greenBoxRanges.ach.max;
-  }
 
   if (selectedSummary) {
 
@@ -1334,15 +1325,9 @@ function updateFaceVelocityChart() {
       "<b>%{x|%b %d, %Y}</b><br>" +
       "Face velocity: %{y:.2f}<extra></extra>"
   };
-
-  let velMin = 80;
-  let velMax = 120;
-   
-   if (heatmapMetric.value === "faceVelocity") {
-       velMin = greenBoxRanges.faceVelocity.min;
-       velMax = greenBoxRanges.faceVelocity.max;
-   }
-
+  velMin = greenBoxRanges.faceVelocity.min;
+  velMax = greenBoxRanges.faceVelocity.max;
+  
   // Show the first recorded face velocity as a baseline.
   const baseline = records[0].faceVelocity;
 
