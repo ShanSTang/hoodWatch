@@ -57,6 +57,17 @@ const tableCount = document.getElementById("tableCount");
 const heatmapMetric = document.getElementById("heatmapMetric");
 const heatmapTitle = document.getElementById("heatmapTitle");
 
+const greenBoxRanges = {
+    ach: {
+        min: 200,
+        max: 400
+    },
+    faceVelocity: {
+        min: 80,
+        max: 120
+    }
+};
+
 /* ---------------------------------------------------------
    Required columns
    --------------------------------------------------------- */
@@ -1222,8 +1233,8 @@ function updateTrendChart() {
   var achMax = 400
 
   if (heatmapMetric.value == "ach") {
-     achMin = document.getElementById("greenY0").value
-     achMax = document.getElementById("greenY1").value
+     achMin = greenBoxRanges.ach.min;
+     achMax = greenBoxRanges.ach.max;
   }
 
   if (selectedSummary) {
@@ -1328,8 +1339,8 @@ function updateFaceVelocityChart() {
   let velMax = 120;
    
    if (heatmapMetric.value === "faceVelocity") {
-       velMin = Number(document.getElementById("greenY0").value);
-       velMax = Number(document.getElementById("greenY1").value);
+       velMin = greenBoxRanges.faceVelocity.min;
+       velMax = greenBoxRanges.faceVelocity.max;
    }
 
   // Show the first recorded face velocity as a baseline.
@@ -1403,17 +1414,13 @@ function rankingValue(row, metric) {
    --------------------------------------------------------- */
 
 function setGreenBoxDefaults() {
-  const y0Input = document.getElementById("greenY0");
-  const y1Input = document.getElementById("greenY1");
-  const metric = heatmapMetric.value || "ach";
+    const metric = heatmapMetric.value || "ach";
 
-  if (metric === "ach") {
-    y0Input.value = 200;
-    y1Input.value = 400;
-  } else if (metric === "faceVelocity") {
-    y0Input.value = 80;
-    y1Input.value = 120;
-  }
+    document.getElementById("greenY0").value =
+        greenBoxRanges[metric].min;
+
+    document.getElementById("greenY1").value =
+        greenBoxRanges[metric].max;
 }
 
 function updateHeatmapChart() {
@@ -1943,14 +1950,20 @@ labFilter.addEventListener(
 );
 
 document.getElementById("updateGreenBox").onclick = () => {
-   const y0 = Number(document.getElementById("greenY0").value);
-   const y1 = Number(document.getElementById("greenY1").value);
+    const metric = heatmapMetric.value || "ach";
 
-   updateTrendChart();
-   updateFaceVelocityChart();
-   updateHeatmapChart();
-   updateYearlyPassSummary();
-}
+    const y0 = Number(document.getElementById("greenY0").value);
+    const y1 = Number(document.getElementById("greenY1").value);
+
+    // Remember the user's range for this metric
+    greenBoxRanges[metric].min = y0;
+    greenBoxRanges[metric].max = y1;
+
+    updateTrendChart();
+    updateFaceVelocityChart();
+    updateHeatmapChart();
+    updateYearlyPassSummary();
+};
 
 
 startDate.addEventListener(
