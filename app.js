@@ -820,40 +820,6 @@ function updateHeatmap() {
 
 function updateKPIs() {
 
-  /*const flagged = summary.filter(
-    row => getDeteriorationStatus(row).flagged
-  );
-
-  const failingVAVSystems = new Set(
-     summary
-        .filter(row=> getVAVFailureStatus(row).failing)
-        .map(row => row.hoodKey)
-  );
-  const buildings = new Set(
-    summary.map(row => row.building)
-  );
-
-  const labs = new Set(
-    summary.map(row => row.lab)
-  );
-
-  kpiHoods.textContent =
-    summary.length.toLocaleString();
-
-  kpiFlagged.textContent =
-    flagged.length.toLocaleString();
-   kpiVAVFailing.textContent=
-      failingVAVSystems.size.toLocaleString();
-
-  kpiBuildings.textContent =
-    buildings.size.toLocaleString();
-
-  kpiLabs.textContent =
-    labs.size.toLocaleString();
-
-  flagCount.textContent =
-    `${flagged.length} flagged`;*/
-
   const monitoredHoods = new Set(
     filteredRecords.map(record => record.hoodKey)
   );
