@@ -459,16 +459,6 @@ tbody tr:hover { background: #f8faff; }
 
 td { color: #34445c; }
 
-.table-flag {
-  display: inline-block;
-  padding: 4px 7px;
-  border-radius: 5px;
-  background: var(--red-bg);
-  color: var(--red);
-  font-size: 10px;
-  font-weight: 750;
-}
-
 .table-normal {
   background: var(--green-bg);
   color: var(--green);
