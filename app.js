@@ -345,6 +345,25 @@ function validateColumns(rows) {
 function parseRows(rows) {
   const parsed = [];
 
+  // Find optional spreadsheet columns even if their
+  // capitalization, spacing, or underscores differ.
+  function getOptionalColumn(row, names) {
+    const normalize = value =>
+      String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    for (const name of names) {
+      const key = Object.keys(row).find(
+        column => normalize(column) === normalize(name)
+      );
+
+      if (key !== undefined) {
+        return normalizeValue(row[key]);
+      }
+    }
+
+    return "";
+  }
+
   rows.forEach((row, index) => {
     const building = normalizeValue(
       row["Building"],
@@ -364,35 +383,52 @@ function parseRows(rows) {
     const date = parseDate(row["Date"]);
     const ach = parseACH(row["Min ACH"]);
     const cov = parsePercentage(row["Average_Zone_COV"]);
-    const faceVelocity = parseACH(row["FaceV Avg"]); 
+    const faceVelocity = parseACH(row["FaceV Avg"]);
+    const testRating = getOptionalColumn(row, ["Test Rating", "Test_Rating", "TestRating"]);
 
+    // Read metadata from the original inspection sheet.
+    const exhaustType = getOptionalColumn(row, [
+      "Exhaust Type",
+      "Exhaust_Type",
+      "ExhaustType"
+    ]);
+
+    const totalArea = getOptionalColumn(row, [
+      "Total Area",
+      "Total_Area",
+      "TotalArea"
+    ]);
+
+    // Keep the same record-validation rules.
     if (
-        !date ||
-        (!Number.isFinite(ach) && !Number.isFinite(faceVelocity))
-      ) {
-        return;
-      }
+      !date ||
+      (!Number.isFinite(ach) &&
+       !Number.isFinite(faceVelocity))
+    ) {
+      return;
+    }
 
-    /*
-     * Equivalent to:
-     *
-     * df["Hood Key"] =
-     * Building ID + " | " + Lab ID + " | " + Hood ID
-     */
-    const hoodKey =
-      `${building} | ${lab} | ${hood}`;
+    // Unique hood identifier.
+    const hoodKey = `${building} | ${lab} | ${hood}`;
 
     parsed.push({
-        rowNumber: index + 2,
-        building,
-        lab,
-        hood,
-        date,
-        dateString: dateKey(date),
-        ach: Number.isFinite(ach) ? ach : null,
-        faceVelocity: Number.isFinite(faceVelocity) ? faceVelocity : null,
-        hoodKey
-      });
+      rowNumber: index + 2,
+      building,
+      lab,
+      hood,
+      date,
+      dateString: dateKey(date),
+
+      ach: Number.isFinite(ach) ? ach : null,
+      faceVelocity: Number.isFinite(faceVelocity)
+        ? faceVelocity
+        : null,
+      cov: Number.isFinite(cov) ? cov : null,
+
+      exhaustType,
+      totalArea,
+      hoodKey
+    });
   });
 
   return parsed;
@@ -867,16 +903,155 @@ function updateAllVisuals() {
   updateKPIs();
   updateHoodSelector();
   updateTable();
+  updateBuildingComparison();
   updateTrendChart();
   updateFaceVelocityChart();
   updateHeatmapChart();
   updateYearlyPassSummary();
+  updateWorstPerformers();
+  updateAnalysis();
 }
 
 function updateHeatmap() {
   updateHeatmapChart();
 }
 
+
+/* ---------------------------------------------------------
+   Building Performance Comparison
+   --------------------------------------------------------- */
+
+let buildingComparisonSort = "building";
+let buildingComparisonDirection = "asc";
+
+function calculateBuildingComparison() {
+  // Compare every building, regardless of building/lab selections.
+  // Date limits still apply to the comparison.
+  const start = startDate.value
+    ? new Date(`${startDate.value}T00:00:00`) : null;
+  const end = endDate.value
+    ? new Date(`${endDate.value}T23:59:59.999`) : null;
+
+  const records = allRecords.filter(record =>
+    (!start || record.date >= start) &&
+    (!end || record.date <= end)
+  ).sort((a, b) => a.date - b.date || a.rowNumber - b.rowNumber);
+
+  const hoods = new Map();
+  const buildings = new Map();
+  for (const record of records) {
+    if (!hoods.has(record.hoodKey)) hoods.set(record.hoodKey, []);
+    hoods.get(record.hoodKey).push(record);
+    if (!buildings.has(record.building)) {
+      buildings.set(record.building, {
+        building: record.building, hoodCount: 0,
+        velocityTotal: 0, velocityCount: 0, lowVelocityCount: 0,
+        covTotal: 0, covCount: 0,
+        achCount: 0, unsatisfactoryAchCount: 0
+      });
+    }
+  }
+
+  for (const hoodRecords of hoods.values()) {
+    const stats = buildings.get(hoodRecords[0].building);
+    stats.hoodCount++;
+    const latest = field => {
+      for (let i = hoodRecords.length - 1; i >= 0; i--) {
+        if (Number.isFinite(hoodRecords[i][field])) {
+          return hoodRecords[i][field];
+        }
+      }
+      return null;
+    };
+
+    const velocity = latest("faceVelocity");
+    if (velocity !== null) {
+      stats.velocityTotal += velocity;
+      stats.velocityCount++;
+      if (velocity < greenBoxRanges.faceVelocity.min) stats.lowVelocityCount++;
+    }
+
+    const cov = latest("cov");
+    if (cov !== null) {
+      stats.covTotal += cov;
+      stats.covCount++;
+    }
+
+    const ach = latest("ach");
+    if (ach !== null) {
+      stats.achCount++;
+      if (ach < greenBoxRanges.ach.min || ach > greenBoxRanges.ach.max) {
+        stats.unsatisfactoryAchCount++;
+      }
+    }
+  }
+
+  return [...buildings.values()].map(s => ({
+    building: s.building,
+    hoodCount: s.hoodCount,
+    avgVelocity: s.velocityCount ? s.velocityTotal / s.velocityCount : null,
+    lowVelocityPct: s.velocityCount ? 100 * s.lowVelocityCount / s.velocityCount : null,
+    vavCov: s.covCount ? s.covTotal / s.covCount : null,
+    unsatisfactoryAchPct: s.achCount ? 100 * s.unsatisfactoryAchCount / s.achCount : null
+  }));
+}
+
+function updateBuildingComparison() {
+  const body = document.getElementById("buildingComparisonBody");
+  if (!body) return;
+  const rows = calculateBuildingComparison();
+  rows.sort((a, b) => {
+    const av = a[buildingComparisonSort];
+    const bv = b[buildingComparisonSort];
+    if (av == null || bv == null) {
+      if (av == null && bv != null) return 1;
+      if (bv == null && av != null) return -1;
+    }
+    const cmp = typeof av === "string" ? naturalSort(av, bv) : (av - bv);
+    return (buildingComparisonDirection === "asc" ? cmp : -cmp) ||
+      naturalSort(a.building, b.building);
+  });
+
+  const number = (value, digits = 1) =>
+    Number.isFinite(value) ? formatNumber(value, digits) : "—";
+  const percent = value => Number.isFinite(value) ? `${number(value)}%` : "—";
+  const risk = value => !Number.isFinite(value) ? "" :
+    value >= 25 ? "building-risk-high" :
+    value >= 10 ? "building-risk-medium" : "building-risk-low";
+
+  body.innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td><strong>${escapeHTML(r.building)}</strong></td>
+      <td>${r.hoodCount}</td>
+      <td>${number(r.avgVelocity)}</td>
+      <td class="${risk(r.lowVelocityPct)}">${percent(r.lowVelocityPct)}</td>
+      <td>${percent(r.vavCov)}</td>
+      <td class="${risk(r.unsatisfactoryAchPct)}">${percent(r.unsatisfactoryAchPct)}</td>
+    </tr>
+  `).join("") :
+    '<tr><td colspan="6" class="empty-cell">No buildings match the selected date range.</td></tr>';
+
+  document.querySelectorAll("[data-building-sort]").forEach(th => {
+    const active = th.dataset.buildingSort === buildingComparisonSort;
+    th.classList.toggle("sort-asc", active && buildingComparisonDirection === "asc");
+    th.classList.toggle("sort-desc", active && buildingComparisonDirection === "desc");
+    th.setAttribute("aria-sort", active ?
+      (buildingComparisonDirection === "asc" ? "ascending" : "descending") : "none");
+  });
+}
+
+document.querySelectorAll("[data-building-sort]").forEach(th => {
+  th.addEventListener("click", () => {
+    const column = th.dataset.buildingSort;
+    if (buildingComparisonSort === column) {
+      buildingComparisonDirection = buildingComparisonDirection === "asc" ? "desc" : "asc";
+    } else {
+      buildingComparisonSort = column;
+      buildingComparisonDirection = "asc";
+    }
+    updateBuildingComparison();
+  });
+});
 
 /* ---------------------------------------------------------
    KPIs
@@ -1006,8 +1181,8 @@ function sortSummary(data) {
     switch (sortColumn) {
 
       case "status":
-        valueA = getFaceVelocityDeteriorationStatus(a).flagged ? 1 : 0;
-        valueB = getFaceVelocityDeteriorationStatus(b).flagged ? 1 : 0;
+        valueA = getFaceVelocityDeteriorationStatus(a.hoodKey).flagged ? 1 : 0;
+        valueB = getFaceVelocityDeteriorationStatus(b.hoodKey).flagged ? 1 : 0;
         break;
 
       case "building":
@@ -1098,17 +1273,7 @@ function updateTable() {
 
       button.addEventListener("click", () => {
 
-        selectedHoodKey = button.dataset.hoodKey;
-
-        hoodFilter.value = selectedHoodKey;
-
-        updateTrendChart();
-        updateFaceVelocityChart();
-
-        trendChart.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
+        selectHoodAndShowHistory(button.dataset.hoodKey);
       });
     });
 }
@@ -1750,99 +1915,182 @@ function updateYearlyPassSummary() {
   `;
 }
 
+
 /* ---------------------------------------------------------
    Export
    --------------------------------------------------------- */
 
-exportBtn.addEventListener("click", () => {
+// Calculate statistics for one hood and one measurement.
+function exportMetricStats(records, metric) {
+  const valid = records
+    .filter(r => Number.isFinite(r[metric]))
+    .sort((a, b) =>
+      a.date - b.date || a.rowNumber - b.rowNumber
+    );
 
+  if (!valid.length) {
+    return {
+      mean: "",
+      stdDev: "",
+      latest: "",
+      deviation: "",
+      yearComparison: ""
+    };
+  }
+
+  const latest = valid[valid.length - 1];
+
+  // Historical baseline: every valid inspection except
+  // the latest, matching Performance Analysis.
+  const history = valid.slice(0, -1);
+
+  const mean = history.length
+    ? history.reduce(
+        (sum, r) => sum + r[metric],
+        0
+      ) / history.length
+    : null;
+
+  // Historical sample standard deviation (n - 1).
+  const stdDev = history.length >= 2
+    ? Math.sqrt(
+        history.reduce(
+          (sum, r) => sum + (r[metric] - mean) ** 2,
+          0
+        ) / (history.length - 1)
+      )
+    : null;
+
+  const deviation = mean !== null
+    ? latest[metric] - mean
+    : null;
+
+  // Keep the latest valid measurement in each year.
+  const latestByYear = new Map();
+
+  valid.forEach(record => {
+    latestByYear.set(
+      record.date.getFullYear(),
+      record
+    );
+  });
+
+  const years = [...latestByYear.keys()]
+    .sort((a, b) => b - a);
+
+  // Compare the most recent year with the preceding
+  // available year, not two tests in the same year.
+  const yearComparison = years.length >= 2
+    ? latestByYear.get(years[0])[metric] -
+      latestByYear.get(years[1])[metric]
+    : "";
+
+  return {
+    mean: mean ?? "",
+    stdDev: stdDev ?? "",
+    latest: latest[metric],
+    deviation: deviation ?? "",
+    yearComparison
+  };
+}
+
+// Export one summary row per hood.
+exportBtn.addEventListener("click", () => {
   if (!summary.length) {
     return;
   }
 
+  // Group currently filtered inspections by hood.
+  const grouped = new Map();
+
+  filteredRecords.forEach(record => {
+    if (!grouped.has(record.hoodKey)) {
+      grouped.set(record.hoodKey, []);
+    }
+
+    grouped.get(record.hoodKey).push(record);
+  });
 
   const exportRows = summary.map(row => {
+    const records = (grouped.get(row.hoodKey) || [])
+      .slice()
+      .sort((a, b) =>
+        a.date - b.date || a.rowNumber - b.rowNumber
+      );
 
-    const status =
-      getFaceVelocityDeteriorationStatus(row);
+    const ach = exportMetricStats(records, "ach");
+    const velocity = exportMetricStats(
+      records,
+      "faceVelocity"
+    );
+    const cov = exportMetricStats(records, "cov");
 
+    // Use the latest nonblank metadata for this hood.
+    const latestMetadata = field => {
+      const record = [...records].reverse().find(
+        r => r[field] !== null &&
+             r[field] !== undefined &&
+             r[field] !== ""
+      );
+
+      return record ? record[field] : "";
+    };
 
     return {
-      "Hood Key": row.hoodKey,
+      // 1-5: Identification
+      "Hood ID": row.hoodKey,
       "Building ID": row.building,
       "Lab ID": row.lab,
-      "Hood ID": row.hood,
+      "First Test Date": dateKey(row.firstInspection),
+      "Latest Test Date": dateKey(row.latestInspection),
 
-      "First Inspection":
-        dateKey(row.firstInspection),
+      // 6-9: ACH
+      "Average ACH": ach.mean,
+      "Stnd of ACH": ach.stdDev,
+      "Latest ACH": ach.latest,
+      "Mean vs Latest ACH":
+        ach.deviation,
 
-      "Latest Inspection":
-        dateKey(row.latestInspection),
+      // 10-13: Face velocity
+      "Avg Face Vel.": velocity.mean,
+      "Stnd of Face Vel.":
+        velocity.stdDev,
+      "Latest Face Vel.": velocity.latest,
+      "Mean vs Latest Face Vel.":
+        velocity.deviation,
 
-      "Baseline ACH":
-        row.baselineACH,
+      // 14-17: COV
+      "Average COV": cov.mean,
+      "Stnd of COV": cov.stdDev,
+      "Latest COV": cov.latest,
+      "Mean vs Latest COV":
+        cov.deviation,
 
-      "Latest ACH":
-        row.latestACH,
+      // 18-20: Latest year versus previous available year
+      "Current ACH vs Previous ACH":
+        ach.yearComparison,
+      "Current Face Vel. vs Previous Face Vel.":
+        velocity.yearComparison,
+      "Current COV vs Previous COV":
+        cov.yearComparison,
 
-      "Previous ACH":
-        row.previousACH,
-
-      "ACH Drop vs Previous":
-        row.achDropPrevious,
-
-      "ACH Drop % vs Previous":
-        row.achDropPercentPrevious,
-
-      "ACH Drop vs Baseline":
-        row.achDropBaseline,
-
-      "ACH Drop % vs Baseline":
-        row.achDropPercentBaseline,
-
-      "Inspection Count":
-        row.inspectionCount,
-
-      "Trend Available":
-        row.trendAvailable,
-
-      "Flagged":
-        status.flagged,
-
-      "Flag Reason":
-        status.reasons.join("; ")
+      // 21-22: Uploaded metadata
+      "Exhaust Type": latestMetadata("exhaustType"),
+      "Total Area": latestMetadata("totalArea")
     };
   });
 
-
-  const worksheet =
-    XLSX.utils.json_to_sheet(exportRows);
-
-  const workbook =
-    XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    worksheet,
-    "Hood Summary"
-  );
-
-
-  const csv =
-    XLSX.utils.sheet_to_csv(worksheet);
-
+  // Generate CSV using SheetJS.
+  const worksheet = XLSX.utils.json_to_sheet(exportRows);
+  const csv = XLSX.utils.sheet_to_csv(worksheet);
 
   const blob = new Blob(
     [csv],
     { type: "text/csv;charset=utf-8;" }
   );
 
-
-  const url =
-    URL.createObjectURL(blob);
-
-  const link =
-    document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
 
   link.href = url;
   link.download =
@@ -1854,7 +2102,6 @@ exportBtn.addEventListener("click", () => {
 
   URL.revokeObjectURL(url);
 });
-
 
 /* ---------------------------------------------------------
    Event listeners
@@ -1888,6 +2135,9 @@ document.getElementById("updateGreenBox").onclick = () => {
     updateFaceVelocityChart();
     updateHeatmapChart();
     updateYearlyPassSummary();
+    updateWorstPerformers();
+    updateAnalysis();
+    updateBuildingComparison(); 
 };
 
 
@@ -2199,3 +2449,672 @@ Plotly.newPlot(
   baseChartLayout("Building and lab heatmap"),
   plotConfig()
 );
+
+/* ---------------------------------------------------------
+   Tabs, worst performers, and performance analysis
+   --------------------------------------------------------- */
+const analysisMetric = document.getElementById("analysisMetric");
+const analysisHood = document.getElementById("analysisHood");
+let activeTab = "summary";
+let analysisSortColumn = "pct";
+let analysisSortDirection = "asc";
+
+document.querySelectorAll(".dashboard-tab").forEach(button => {
+  button.addEventListener("click", () => {
+    activeTab = button.dataset.tab;
+    document.querySelectorAll(".dashboard-tab").forEach(tab => {
+      const selected = tab === button;
+      tab.classList.toggle("active", selected);
+      tab.setAttribute("aria-selected", String(selected));
+    });
+    for (const name of ["summary", "history"]) {
+      const element = document.getElementById(`${name}Tab`);
+      element.hidden = name !== activeTab;
+      element.classList.toggle("active", name === activeTab);
+    }
+    if (activeTab === "history") {
+      requestAnimationFrame(() => {
+        [trendChart, rankingChart, document.getElementById("analysisHistoryChart"),
+          document.getElementById("analysisFleetChart")].forEach(chart => {
+          if (chart && chart.data) Plotly.Plots.resize(chart);
+        });
+      });
+    } else {
+      requestAnimationFrame(() => {
+        if (heatmapChart.data) Plotly.Plots.resize(heatmapChart);
+      });
+    }
+  });
+});
+
+// Keep the ACH, face velocity, and performance analysis selections synchronized.
+function selectHoodAndShowHistory(hoodKey) {
+  selectedHoodKey = hoodKey;
+  hoodFilter.value = hoodKey;
+  analysisHood.value = hoodKey;
+  document.querySelector('[data-tab="history"]').click();
+  document.querySelector(".analysis-panel").open = true;
+  updateTrendChart();
+  updateFaceVelocityChart();
+  updateAnalysis();
+  requestAnimationFrame(() => {
+    document.querySelector(".analysis-panel").scrollIntoView({behavior: "smooth", block: "start"});
+  });
+}
+
+function updateWorstPerformers() {
+  const { min, max } = greenBoxRanges.faceVelocity;
+  const velocity = summary
+    .filter(row => Number.isFinite(row.latestFaceVelocity))
+    .map(row => ({
+      ...row,
+      velocityGroup: row.latestFaceVelocity < min ? 0 :
+        row.latestFaceVelocity > max ? 1 : 2
+    }))
+    .sort((a, b) => {
+      if (a.velocityGroup !== b.velocityGroup) return a.velocityGroup - b.velocityGroup;
+      const difference = a.velocityGroup === 1
+        ? b.latestFaceVelocity - a.latestFaceVelocity
+        : a.latestFaceVelocity - b.latestFaceVelocity;
+      return difference || naturalSort(a.hoodKey, b.hoodKey);
+    });
+
+  // Use the latest inspection containing a valid COV for each hood.
+  const covByHood = new Map();
+  [...filteredRecords]
+    .sort((a, b) => a.date - b.date || a.rowNumber - b.rowNumber)
+    .forEach(row => {
+      if (Number.isFinite(row.cov)) covByHood.set(row.hoodKey, row);
+    });
+  const cov = [...covByHood.values()]
+    .sort((a, b) => b.cov - a.cov || naturalSort(a.hoodKey, b.hoodKey));
+
+  function render(id, rows, field, digits, unit, colored = false) {
+    document.getElementById(id).innerHTML = rows.length ? rows.map(row => {
+      const groupClass = colored
+        ? ["velocity-low", "velocity-high", "velocity-good"][row.velocityGroup]
+        : "";
+      return `
+        <button type="button" class="worst-row ${groupClass}" data-hood="${escapeHTML(row.hoodKey)}">
+          <span>
+            <strong>${escapeHTML(row.hood)}</strong>
+            <small>${escapeHTML(row.building)} · ${escapeHTML(row.lab)} · ${formatDate(row.date || row.latestInspection)}</small>
+          </span>
+          <span class="worst-value">${formatNumber(row[field], digits)} ${unit}</span>
+        </button>`;
+    }).join("") : '<p class="muted">No matching measurements.</p>';
+
+    document.querySelectorAll(`#${id} .worst-row`).forEach(button => {
+      button.addEventListener("click", () => {
+        selectHoodAndShowHistory(button.dataset.hood);
+      });
+    });
+  }
+
+  render("worstVelocity", velocity, "latestFaceVelocity", 1, "fpm", true);
+  render("worstCOV", cov, "cov", 1, "%");
+}
+
+function getAnalysisRows() {
+  const metric = analysisMetric.value;
+  const grouped = new Map();
+  [...filteredRecords].sort((a,b) => a.date - b.date || a.rowNumber - b.rowNumber)
+    .forEach(record => {
+      if (!Number.isFinite(record[metric])) return;
+      if (!grouped.has(record.hoodKey)) grouped.set(record.hoodKey, []);
+      grouped.get(record.hoodKey).push(record);
+    });
+  return [...grouped].map(([key, records]) => {
+    const latest = records[records.length - 1];
+    const previous = records.slice(0, -1);
+    const mean = previous.length ? previous.reduce((sum,r) => sum + r[metric],0) / previous.length : null;
+    const value = latest[metric];
+    const deviation = mean !== null ? value - mean : null;
+    const pct = mean !== null && mean !== 0 ? 100 * deviation / Math.abs(mean) : null;
+    const sampleStdDev = previous.length >= 2 ? Math.sqrt(
+      previous.reduce((sum,r) => sum + (r[metric] - mean) ** 2,0) / (previous.length - 1)
+    ) : null;
+    return {key, latest, records, mean, value, deviation, pct, sampleStdDev};
+  });
+}
+
+
+function updateAnalysis() {
+  const metric = analysisMetric.value;
+  const rows = getAnalysisRows();
+  const old = analysisHood.value || selectedHoodKey;
+
+  // ---------------------------------------------------------
+  // Hood Selection
+  // ---------------------------------------------------------
+
+  analysisHood.innerHTML =
+    '<option value="">Select a hood</option>' +
+    rows
+      .slice()
+      .sort((a, b) => naturalSort(a.key, b.key))
+      .map(r =>
+        `<option value="${escapeHTML(r.key)}">${escapeHTML(r.key)}</option>`
+      )
+      .join("");
+
+  if (rows.some(r => r.key === old)) {
+    analysisHood.value = old;
+  }
+
+  const current = rows.find(r => r.key === analysisHood.value);
+
+  // ---------------------------------------------------------
+  // Measurement Formatting
+  // ---------------------------------------------------------
+
+  const unit =
+    metric === "ach"
+      ? "ACH"
+      : metric === "faceVelocity"
+        ? "fpm"
+        : "%";
+
+  const fmt = value =>
+    Number.isFinite(value)
+      ? `${formatNumber(value, 2)} ${unit}`
+      : "—";
+
+  // ---------------------------------------------------------
+  // Performance Analysis KPIs
+  // ---------------------------------------------------------
+
+  document.getElementById("analysisLatest").textContent =
+    current ? fmt(current.value) : "—";
+
+  document.getElementById("analysisMean").textContent =
+    current ? fmt(current.mean) : "—";
+
+  document.getElementById("analysisDeviation").textContent =
+    current && Number.isFinite(current.pct)
+      ? `${current.pct > 0 ? "+" : ""}${formatNumber(current.pct, 1)}% (${fmt(current.deviation)})`
+      : "—";
+
+  document.getElementById("analysisStdDev").textContent =
+    current ? fmt(current.sampleStdDev) : "—";
+
+  // Rating belongs to the latest inspection for this hood,
+  // independent of which numeric metric is selected.
+  const latestInspection = current
+    ? filteredRecords
+        .filter(record => record.hoodKey === current.key)
+        .sort((a, b) => b.date - a.date || b.rowNumber - a.rowNumber)[0]
+    : null;
+  const ratingElement = document.getElementById("analysisTestRating");
+  const rating = latestInspection?.testRating || "";
+  ratingElement.textContent = rating || "—";
+  ratingElement.classList.toggle("test-rating-pass", rating.toLowerCase() === "pass");
+  ratingElement.classList.toggle("test-rating-fail", rating.toLowerCase() === "fail");
+
+  document.getElementById("analysisInfo").textContent =
+    current
+      ? `${current.records.length} valid ${unit} measurements; ` +
+        `${Math.max(0, current.records.length - 1)} used for historical mean. ` +
+        `${formatDate(current.latest.date)} is the latest valid test.`
+      : "Select a hood to view its historical statistics.";
+
+  // ---------------------------------------------------------
+  // Sort All Hoods Table
+  // ---------------------------------------------------------
+
+  const sortedRows = rows.slice().sort((a, b) => {
+    const col = analysisSortColumn;
+
+    let av =
+      col === "date"
+        ? a.latest.date.getTime()
+        : ["building", "lab", "hood"].includes(col)
+          ? a.latest[col]
+          : a[col];
+
+    let bv =
+      col === "date"
+        ? b.latest.date.getTime()
+        : ["building", "lab", "hood"].includes(col)
+          ? b.latest[col]
+          : b[col];
+
+    const aMissing =
+      av === null ||
+      av === undefined ||
+      (typeof av === "number" && !Number.isFinite(av));
+
+    const bMissing =
+      bv === null ||
+      bv === undefined ||
+      (typeof bv === "number" && !Number.isFinite(bv));
+
+    if (aMissing !== bMissing) {
+      return aMissing ? 1 : -1;
+    }
+
+    let cmp = aMissing
+      ? 0
+      : typeof av === "string"
+        ? naturalSort(av, bv)
+        : av - bv;
+
+    return (
+      (analysisSortDirection === "asc" ? cmp : -cmp) ||
+      naturalSort(a.key, b.key)
+    );
+  });
+
+  // ---------------------------------------------------------
+  // Populate All Hoods Table
+  // ---------------------------------------------------------
+
+  document.getElementById("analysisBody").innerHTML =
+    rows.length
+      ? sortedRows
+          .map(
+            r => `
+              <tr>
+                <td>${escapeHTML(r.latest.building)}</td>
+                <td>${escapeHTML(r.latest.lab)}</td>
+
+                <td>
+                  <button
+                    type="button"
+                    class="table-hood-button analysis-select"
+                    data-hood="${escapeHTML(r.key)}"
+                  >
+                    ${escapeHTML(r.latest.hood)}
+                  </button>
+                </td>
+
+                <td>${fmt(r.value)}</td>
+                <td>${fmt(r.mean)}</td>
+
+                <td>
+                  ${
+                    Number.isFinite(r.pct)
+                      ? `${r.pct > 0 ? "+" : ""}${formatNumber(r.pct, 1)}%`
+                      : "—"
+                  }
+                </td>
+
+                <td>${formatDate(r.latest.date)}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : `
+          <tr>
+            <td colspan="7" class="empty-cell">
+              No measurements match the current filters.
+            </td>
+          </tr>
+        `;
+
+  // ---------------------------------------------------------
+  // Update Table Sorting Indicators
+  // ---------------------------------------------------------
+
+  document.querySelectorAll("[data-analysis-sort]").forEach(th => {
+    const isSelected =
+      th.dataset.analysisSort === analysisSortColumn;
+
+    th.classList.toggle(
+      "sort-asc",
+      isSelected && analysisSortDirection === "asc"
+    );
+
+    th.classList.toggle(
+      "sort-desc",
+      isSelected && analysisSortDirection === "desc"
+    );
+
+    th.setAttribute(
+      "aria-sort",
+      isSelected
+        ? analysisSortDirection === "asc"
+          ? "ascending"
+          : "descending"
+        : "none"
+    );
+  });
+
+  // ---------------------------------------------------------
+  // Hood Selection from All Hoods Table
+  // ---------------------------------------------------------
+
+  document.querySelectorAll(".analysis-select").forEach(button => {
+    button.addEventListener("click", () => {
+      analysisHood.value = button.dataset.hood;
+      selectedHoodKey = button.dataset.hood;
+      hoodFilter.value = selectedHoodKey;
+
+      updateTrendChart();
+      updateFaceVelocityChart();
+      updateAnalysis();
+    });
+  });
+
+  // ---------------------------------------------------------
+  // Chart Elements
+  // ---------------------------------------------------------
+
+  const hist = document.getElementById("analysisHistoryChart");
+  const fleet = document.getElementById("analysisFleetChart");
+
+  // ---------------------------------------------------------
+  // Selected Hood History Chart
+  // ---------------------------------------------------------
+
+  const historyTraces = current
+    ? [
+        {
+          type: "scatter",
+          mode: "lines+markers",
+          name: "Measurements",
+          x: current.records.map(r => r.date),
+          y: current.records.map(r => r[metric])
+        }
+      ]
+    : [];
+
+  // Add historical mean reference line.
+  if (current && Number.isFinite(current.mean)) {
+    historyTraces.push({
+      type: "scatter",
+      mode: "lines",
+      name: "Historical mean",
+
+      x: [
+        current.records[0].date,
+        current.latest.date
+      ],
+
+      y: [
+        current.mean,
+        current.mean
+      ],
+
+      line: {
+        dash: "dash",
+        color: "#2864dc"
+      }
+    });
+  }
+
+  // ---------------------------------------------------------
+  // Green Passing Range
+  // ---------------------------------------------------------
+
+  // Use the same user-configured green ranges as the
+  // original ACH and face velocity trend charts.
+  //
+  // COV has no defined passing range and is not shaded.
+
+  const range =
+    metric === "ach" || metric === "faceVelocity"
+      ? greenBoxRanges[metric]
+      : null;
+
+  const validRange =
+    range &&
+    Number.isFinite(range.min) &&
+    Number.isFinite(range.max) &&
+    range.min < range.max;
+
+  const rangeNote = document.getElementById("analysisRangeNote");
+
+  rangeNote.textContent = validRange
+    ? `Green band: ${formatNumber(range.min, 2)}–${formatNumber(range.max, 2)} ${unit} (configured on Summary).`
+    : metric === "cov"
+      ? "No green band for COV: a passing range has not been defined."
+      : "No valid green range is configured for this measurement.";
+
+  const rangeShapes = validRange
+    ? [
+        {
+          type: "rect",
+
+          xref: "paper",
+          x0: 0,
+          x1: 1,
+
+          yref: "y",
+          y0: range.min,
+          y1: range.max,
+
+          fillcolor: "rgba(34, 197, 94, 0.20)",
+
+          line: {
+            color: "rgba(34, 197, 94, 0.5)",
+            width: 1
+          },
+
+          layer: "below"
+        }
+      ]
+    : [];
+
+  // ---------------------------------------------------------
+  // Render Selected Hood History
+  // ---------------------------------------------------------
+
+  Plotly.react(
+    hist,
+    historyTraces,
+
+    {
+      ...baseChartLayout(
+        current
+          ? `${current.latest.hood} — ${unit} history`
+          : "Select a hood"
+      ),
+
+      xaxis: {
+        title: "Inspection date",
+        type: "date"
+      },
+
+      yaxis: {
+        title: unit
+      },
+
+      shapes: rangeShapes
+    },
+
+    plotConfig()
+  );
+
+  // =========================================================
+  // Fleet Comparison Chart
+  // =========================================================
+
+  const comparison =
+    document.getElementById("fleetComparisonMetric").value;
+
+  // Keep only hoods with valid comparison data.
+  const fleetRows = rows
+    .filter(r => Number.isFinite(r[comparison]))
+    .sort(
+      (a, b) =>
+        a[comparison] - b[comparison] ||
+        naturalSort(a.key, b.key)
+    );
+
+  // Keep the chart scrollable rather than allowing
+  // the surrounding panel to grow indefinitely.
+  const plotHeight = Math.max(
+    360,
+    120 + fleetRows.length * 29
+  );
+
+  // Currently selected hood.
+  const selectedKey =
+    analysisHood.value || selectedHoodKey;
+
+  // ---------------------------------------------------------
+  // Fleet Comparison Colors
+  // ---------------------------------------------------------
+
+  // Change these two values to customize the chart colors.
+
+  const selectedHoodColor = "#8050c8"; // Purple
+  const otherHoodColor = "#d2e1f3";    // Blue
+
+  // ---------------------------------------------------------
+  // Render Fleet Comparison
+  // ---------------------------------------------------------
+
+  Plotly.react(
+    fleet,
+
+    fleetRows.length
+      ? [
+          {
+            type: "bar",
+            orientation: "h",
+
+            // Comparison values.
+            x: fleetRows.map(r => r[comparison]),
+
+            // Building, lab and hood labels.
+            y: fleetRows.map(
+              r =>
+                `${r.latest.building} · ${r.latest.lab} · ${r.latest.hood}`
+            ),
+
+            // Purple for selected hood.
+            // Blue for all other hoods.
+            marker: {
+              color: fleetRows.map(r =>
+                r.key === selectedKey
+                  ? selectedHoodColor
+                  : otherHoodColor
+              )
+            },
+
+            // Hover information.
+            hovertext: fleetRows.map(r => r.key),
+            hoverinfo: "x+text"
+          }
+        ]
+      : [],
+
+    {
+      ...baseChartLayout(
+        {
+          value: "Latest measurement",
+          mean: "Historical mean",
+          pct: "Deviation from historical mean"
+        }[comparison]
+      ),
+
+      height: plotHeight,
+
+      margin: {
+        l: 175,
+        r: 25,
+        t: 55,
+        b: 65
+      },
+
+      xaxis: {
+        title:
+          comparison === "pct"
+            ? "Deviation (%)"
+            : unit
+      },
+
+      yaxis: {
+        automargin: true,
+        autorange: "reversed"
+      }
+    },
+
+    {
+      ...plotConfig(),
+      responsive: false
+    }
+  );
+}
+
+// ===========================================================
+// Performance Analysis Event Listeners
+// ===========================================================
+
+// Update analysis when measurement changes.
+analysisMetric.addEventListener("change", updateAnalysis);
+
+// Update fleet chart when comparison metric changes.
+document
+  .getElementById("fleetComparisonMetric")
+  .addEventListener("change", updateAnalysis);
+
+// -----------------------------------------------------------
+// All Hoods Table Sorting
+// -----------------------------------------------------------
+
+document.querySelectorAll("[data-analysis-sort]").forEach(th => {
+  th.tabIndex = 0;
+  th.setAttribute("role", "button");
+
+  const sort = () => {
+    if (analysisSortColumn === th.dataset.analysisSort) {
+      analysisSortDirection =
+        analysisSortDirection === "asc"
+          ? "desc"
+          : "asc";
+    } else {
+      analysisSortColumn = th.dataset.analysisSort;
+      analysisSortDirection = "asc";
+    }
+
+    updateAnalysis();
+  };
+
+  th.addEventListener("click", sort);
+
+  th.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      sort();
+    }
+  });
+});
+
+// -----------------------------------------------------------
+// Hood Selector
+// -----------------------------------------------------------
+
+analysisHood.addEventListener("change", () => {
+  selectedHoodKey = analysisHood.value;
+  hoodFilter.value = selectedHoodKey;
+
+  updateTrendChart();
+  updateFaceVelocityChart();
+  updateAnalysis();
+});
+
+// -----------------------------------------------------------
+// Resize Charts When Performance Analysis Is Expanded
+// -----------------------------------------------------------
+
+document
+  .querySelector(".analysis-panel")
+  .addEventListener("toggle", event => {
+    if (event.target.open && activeTab === "history") {
+      requestAnimationFrame(() => {
+        for (const id of [
+          "analysisHistoryChart",
+          "analysisFleetChart"
+        ]) {
+          const chart = document.getElementById(id);
+
+          if (chart.data) {
+            Plotly.Plots.resize(chart);
+          }
+        }
+      });
+    }
+  });
